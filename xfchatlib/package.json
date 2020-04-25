@@ -1,0 +1,66 @@
+{
+  "_from": "fchatlib",
+  "_id": "fchatlib@1.2.0",
+  "_inBundle": false,
+  "_integrity": "sha512-GWX/LBaWXW3zUrMBlWSMnNCc2fUPOGnzTSaVcurELt+aWijZr+bgTE4R38IjoI+7l87M72BD0gIZ1ve1h8mc7Q==",
+  "_location": "/fchatlib",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "tag",
+    "registry": true,
+    "raw": "fchatlib",
+    "name": "fchatlib",
+    "escapedName": "fchatlib",
+    "rawSpec": "",
+    "saveSpec": null,
+    "fetchSpec": "latest"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/fchatlib/-/fchatlib-1.2.0.tgz",
+  "_shasum": "b5b978d28a343d65d75b29340bf0768efcfd3ee7",
+  "_spec": "fchatlib",
+  "author": {
+    "name": "AelithBlanchett",
+    "email": "tonyteur@yahoo.fr"
+  },
+  "bugs": {
+    "url": "https://github.com/AelithBlanchett/fchatlib/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {
+    "@types/jasmine": "^2.6.0",
+    "@types/node": "^6.0.88",
+    "async": "^1.5.2",
+    "caller-path": "^2.0.0",
+    "glob": "^7.1.2",
+    "import-fresh": "^2.0.0",
+    "jsonfile": "^2.3.1",
+    "lodash": "^4.17.4",
+    "loglevel": "^1.6.7",
+    "path": "^0.12.7",
+    "request": "^2.83.0",
+    "resolve-from": "^3.0.0",
+    "throttle-function": "^0.1.0",
+    "typescript": "^2.5.3",
+    "uuid": "^3.1.0",
+    "ws": "^3.2.0"
+  },
+  "deprecated": false,
+  "description": "FChatLib",
+  "homepage": "https://github.com/AelithBlanchett/fchatlib#readme",
+  "main": "dist/FChatLib.js",
+  "name": "fchatlib",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AelithBlanchett/fchatlib.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublish": "npm run build"
+  },
+  "types": "dist/src/FChatLib.d.ts",
+  "version": "1.2.0"
+}

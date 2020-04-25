@@ -1,0 +1,17 @@
+{
+  "name": "ohno",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "card-deck": "^1.0.1",
+    "dotenv": "^8.2.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "whysendmemailanyway",
+  "license": "ISC"
+}
