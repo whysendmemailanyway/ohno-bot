@@ -27,3 +27,16 @@ let myFchatBot = new FChatLib(options);
 // });
 
 let game = new OhNoGame();
+game.addPlayer('Oney');
+game.addPlayer('Twoey');
+game.startGame();
+
+while (game.isInProgress) {
+    let hand = game.currentPlayer.hand;
+    for (let i = hand.length - 1; i >= 0; i--) {
+        if (game.isCardPlayable(hand[i])) {
+            if (!game.playCard(game.getHighestPlayableCard(), game.currentPlayer, game.currentPlayer.getMostCommonColor())) return;
+            break;
+        }
+    }
+}
