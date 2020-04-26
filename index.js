@@ -2,7 +2,7 @@
 require('dotenv').config();
 let FChatLib = require('./xfchatlib').default;
 let botPlugin = require('./plugins/my_plugin').CommandHandler;
-let UnoGame = require('./src/UnoGame').default;
+let OhNoGame = require('./src/OhNoGame').default;
 let options = {
     username: process.env.FLIST_USERNAME,
     password: process.env.FLIST_PASSWORD,
@@ -26,4 +26,4 @@ let myFchatBot = new FChatLib(options);
 //     }
 // });
 
-let game = new UnoGame();
+let game = new OhNoGame();
