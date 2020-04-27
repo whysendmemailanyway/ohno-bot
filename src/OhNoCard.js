@@ -1,4 +1,5 @@
-const RANKS = require('./OhNoDeckData');
+const DECKDATA = require('./OhNoDeckData');
+const UTILS = require('./OhNoUtils');
 
 class OhNoCard {
     constructor(rank, score, color, name) {
@@ -9,11 +10,15 @@ class OhNoCard {
     }
 
     getName() {
-        return this.name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        return UTILS.titleCase(this.name);
+    }
+
+    isAction() {
+        return (DECKDATA.ACTION_RANKS.includes(this.rank));
     }
 
     isWild() {
-        return (this.rank === RANKS.RANK_WILD || this.rank === RANKS.RANK_WILD_DRAW_4);
+        return (DECKDATA.WILD_RANKS.includes(this.rank));
     }
 }
 

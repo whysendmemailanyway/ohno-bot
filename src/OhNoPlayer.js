@@ -4,6 +4,8 @@ module.exports.default = class OhNoPlayer {
     constructor(name) {
         this.name = name;
         this.hand = [];
+        this.hasShouted = false;
+        this.score = {};
     }
 
     addToHand(cards) {
@@ -13,6 +15,7 @@ module.exports.default = class OhNoPlayer {
         } else {
             arr.push(cards);
         }
+        if (arr.length > 0) this.hasShouted = false;
         this.hand.push(...arr);
         this.hand.sort((a, b) => {
             if (a.color && b.color) {
@@ -52,7 +55,7 @@ module.exports.default = class OhNoPlayer {
         return highestCount;
     }
 
-    removeCardFromHand(index) {
+    removeFromHand(index) {
         this.hand.splice(index, 1);
     }
 
