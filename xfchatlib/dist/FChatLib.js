@@ -287,7 +287,6 @@ class FChatLib {
     }
     connect() {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('attempting to connect');
             this.ws = null;
             this.setFloodLimit(2);
             this.generateCommandHandlers();
@@ -342,7 +341,6 @@ class FChatLib {
         }
     }
     throwError(args, error, chan) {
-        console.log("Error: Please message " + this.config.master + " with the following content:\n Error at " + new Date().toLocaleString() + " on command " + JSON.stringify(args) + " in channel " + chan + " with error: " + JSON.stringify(error));
         this.sendMessage("Error: Please message " + this.config.master + " with the following content:\n Error at " + new Date().toLocaleString() + " on command " + JSON.stringify(args) + " in channel " + chan + " with error: " + JSON.stringify(error), chan);
     }
     //user management
@@ -420,7 +418,6 @@ class FChatLib {
     }
     getTicket() {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('getting ticket');
             return new Promise((resolve, reject) => {
                 request.post({ url: 'https://www.f-list.net/json/getApiTicket.php', form: { account: this.config.username, password: this.config.password } }, (err, httpResponse, body) => {
                     if (err) {
@@ -488,7 +485,7 @@ class FChatLib {
         if (!fs.existsSync(configDir)) {
             fs.mkdirSync(configDir);
         }
-        let ignoredKeys = ["instanciatedPlugin"];
+        let ignoredKeys = ["instantiatedPlugin"];
         let cache = [];
         let tempJson = JSON.stringify([...this.channels], function (key, value) {
             if (typeof value === 'object' && value !== null) {
@@ -504,8 +501,6 @@ class FChatLib {
         jsonfile.writeFile(configDir + fileRoomsJs, tempJson);
     }
     startWebsockets(json) {
-        console.log('starting websockets');
-        console.log(json);
         if (this.config.debug == true) {
             this.ws = new WebSocketClient('ws://chat.f-list.net:8722');
         }
@@ -514,20 +509,17 @@ class FChatLib {
             this.ws = new WebSocketClient('wss://chat.f-list.net/chat2');
         }
         this.ws.on('open', (data) => {
-            console.log("Started WS");
             this.sendWS('IDN', json);
             clearInterval(pingInterval);
             this.pingInterval = setInterval(() => { this.ws.send('PIN'); }, 25000);
         });
         this.ws.on('close', (data) => {
-            console.log("Closed WS");
-            console.log(data);
             process.exit();
         });
         this.ws.on('error', (data) => {
-            console.log("Disconnected WS");
-            console.log(data);
-            setTimeout(() => { this.connect(); }, 4000);
+            setTimeout(() => {
+                this.connect();
+            }, 60000);
         });
         this.ws.on('message', (data, flags) => {
             let command;

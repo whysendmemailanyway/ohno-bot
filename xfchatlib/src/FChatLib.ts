@@ -402,7 +402,6 @@ export default class FChatLib implements IFChatLib{
     }
 
     throwError(args, error, chan){
-        console.log("Error: Please message "+this.config.master+" with the following content:\n Error at "+new Date().toLocaleString()+" on command "+JSON.stringify(args)+" in channel "+chan+" with error: "+JSON.stringify(error));
         this.sendMessage("Error: Please message "+this.config.master+" with the following content:\n Error at "+new Date().toLocaleString()+" on command "+JSON.stringify(args)+" in channel "+chan+" with error: "+JSON.stringify(error), chan);
     }
 
@@ -474,7 +473,6 @@ export default class FChatLib implements IFChatLib{
     }
 
     async getTicket(){
-        console.log('getting ticket');
         return new Promise<object>((resolve, reject) => {
             request.post({ url: 'https://www.f-list.net/json/getApiTicket.php', form: { account: this.config.username, password: this.config.password } }, (err, httpResponse, body) => {
                 if(err){
@@ -553,7 +551,7 @@ export default class FChatLib implements IFChatLib{
             fs.mkdirSync(configDir);
         }
 
-        let ignoredKeys = ["instanciatedPlugin"];
+        let ignoredKeys = ["instantiatedPlugin"];
         let cache = [];
         let tempJson = JSON.stringify([...this.channels], function(key, value) {
             if (typeof value === 'object' && value !== null) {
@@ -580,19 +578,16 @@ export default class FChatLib implements IFChatLib{
             this.ws = new WebSocketClient('wss://chat.f-list.net/chat2');
         }
         this.ws.on('open', (data) => {
-            console.log("Started WS");
             this.sendWS('IDN', json);
             clearInterval(pingInterval);
             this.pingInterval = setInterval(() => { this.ws.send('PIN'); }, 25000);
         });
 
         this.ws.on('close', (data) => {
-            console.log("Closed WS");
             process.exit();
         });
 
         this.ws.on('error', (data) => {
-            console.log("Disconnected WS");
             setTimeout(() => {
                 this.connect();
             }, 60000);

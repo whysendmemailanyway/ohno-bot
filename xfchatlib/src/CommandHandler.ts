@@ -36,10 +36,20 @@ export default class CommandHandler{
                 let found = false;
 
                 for(let plugin of this.pluginsLoaded){
-                    for (let command of this.commandHandlerHelper.internalGetAllFuncs(plugin.instanciatedPlugin)) {
+                    for (let command of this.commandHandlerHelper.internalGetAllFuncs(plugin.instantiatedPlugin)) {
                         if(command === opts.command){
-                            plugin.instanciatedPlugin[opts.command](opts.argument, data);
+                            plugin.instantiatedPlugin[opts.command](opts.argument, data);
                             found = true;
+                            break;
+                        }
+                    }
+                    if (plugin.instantiatedPlugin.aliases && !found){
+                        for (let command of this.commandHandlerHelper.internalGetAllFuncs(plugin.instantiatedPlugin.aliases)) {
+                            if(command === opts.command) {
+                                plugin.instantiatedPlugin.aliases[opts.command](opts.argument, data);
+                                found = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -63,7 +73,7 @@ export default class CommandHandler{
             }
         }
         for(let plugin of this.pluginsLoaded){
-            for(let method of this.commandHandlerHelper.internalGetAllFuncs(plugin.instanciatedPlugin)){
+            for(let method of this.commandHandlerHelper.internalGetAllFuncs(plugin.instantiatedPlugin)){
                 if(method != "processCommand" && cmdArrSorted.indexOf(method) == -1){
                     cmdArrSorted.push(method);
                 }

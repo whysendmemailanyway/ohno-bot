@@ -12,12 +12,12 @@ class CommandHandlerHelper {
         }
         let path = process.cwd() + "/plugins/" + pluginName;
         try {
-            let plugin = { name: "", instanciatedPlugin: {} };
+            let plugin = { name: "", instantiatedPlugin: {} };
             let customPlugin = new requireClean_1.default(path);
             plugin.name = pluginName;
-            plugin.instanciatedPlugin = new customPlugin[plugin.name](this.commandHandler.fChatLibInstance, this.commandHandler.channelName);
+            plugin.instantiatedPlugin = new customPlugin[plugin.name](this.commandHandler.fChatLibInstance, this.commandHandler.channelName);
             let strAddedCommands = "";
-            for (let command of this.internalGetAllFuncs(plugin.instanciatedPlugin)) {
+            for (let command of this.internalGetAllFuncs(plugin.instantiatedPlugin)) {
                 strAddedCommands += "!" + command + ", ";
             }
             strAddedCommands = strAddedCommands.substr(0, strAddedCommands.length - 2);
@@ -67,7 +67,7 @@ class CommandHandlerHelper {
     }
     internalLoadPluginOnStart(pluginsArray) {
         for (let i = 0; i < pluginsArray.length; i++) {
-            let plugin = { name: "", instanciatedPlugin: {} };
+            let plugin = { name: "", instantiatedPlugin: {} };
             plugin.name = pluginsArray[i].name;
             let indexPluginAlreadyExists = this.commandHandler.pluginsLoaded.findIndex(x => x.name == plugin.name);
             if (indexPluginAlreadyExists != -1) {
@@ -76,9 +76,9 @@ class CommandHandlerHelper {
             let path = process.cwd() + "/plugins/" + plugin.name;
             try {
                 let customPlugin = new requireClean_1.default(path);
-                plugin.instanciatedPlugin = new customPlugin[plugin.name](this.commandHandler.fChatLibInstance, this.commandHandler.channelName);
+                plugin.instantiatedPlugin = new customPlugin[plugin.name](this.commandHandler.fChatLibInstance, this.commandHandler.channelName);
                 let strAddedCommands = "";
-                for (let command of this.internalGetAllFuncs(plugin.instanciatedPlugin)) {
+                for (let command of this.internalGetAllFuncs(plugin.instantiatedPlugin)) {
                     strAddedCommands += "!" + command + ", ";
                 }
                 strAddedCommands = strAddedCommands.substr(0, strAddedCommands.length - 2);

@@ -6,6 +6,7 @@ module.exports.default = class OhNoPlayer {
         this.hand = [];
         this.hasShouted = false;
         this.score = {};
+        this.isBot = false;
     }
 
     addToHand(cards) {

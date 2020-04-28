@@ -54,11 +54,30 @@ module.exports.default = class OhNoGame {
         this.startingHandSize = 7;
         this.draw4LastTurn;
         this.targetScore = 500;
+        this.maxPlayers = 10;
     }
 
     addPlayer(name) {
-        // TODO: handle drop-in, drop-out
+        if (this.players.length >= 10) {
+            console.log(`Unable to add ${name}, already at the maximum of 10 players.`);
+            return false;
+        }
+        for (let i = 0; i < this.players.length; i++) {
+            if (this.players[i].name === name) {
+                console.log(`Unable to add new player ${name}, a player with that name is already in the game.`);
+                return false;
+            }
+        }
         this.players.push(new OhNoPlayer(name));
+        return true;
+    }
+
+    renamePlayer(index, newName) {
+        this.players[index].name = newName;
+    }
+
+    removePlayer(index) {
+        this.players = this.players.splice(index, 1);
     }
 
     drawOne() {

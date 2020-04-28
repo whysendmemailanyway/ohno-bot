@@ -20,14 +20,14 @@ export class CommandHandlerHelper{
         let path = process.cwd()+"/plugins/"+pluginName;
 
         try {
-            let plugin:IPlugin = {name:"", instanciatedPlugin: {}};
+            let plugin:IPlugin = {name:"", instantiatedPlugin: {}};
             let customPlugin:any = new RequireClean(path);
             plugin.name = pluginName;
-            plugin.instanciatedPlugin = new customPlugin[plugin.name](this.commandHandler.fChatLibInstance, this.commandHandler.channelName);
+            plugin.instantiatedPlugin = new customPlugin[plugin.name](this.commandHandler.fChatLibInstance, this.commandHandler.channelName);
 
             let strAddedCommands = "";
 
-            for (let command of this.internalGetAllFuncs(plugin.instanciatedPlugin)) {
+            for (let command of this.internalGetAllFuncs(plugin.instantiatedPlugin)) {
                 strAddedCommands += "!" + command + ", ";
             }
 
@@ -87,7 +87,7 @@ export class CommandHandlerHelper{
     internalLoadPluginOnStart(pluginsArray) {
         for (let i = 0; i < pluginsArray.length; i++) {
 
-            let plugin:IPlugin = {name: "", instanciatedPlugin: {}};
+            let plugin:IPlugin = {name: "", instantiatedPlugin: {}};
 
             plugin.name = pluginsArray[i].name;
 
@@ -99,10 +99,10 @@ export class CommandHandlerHelper{
             let path = process.cwd()+"/plugins/"+plugin.name;
             try {
                 let customPlugin:any = new RequireClean(path);
-                plugin.instanciatedPlugin = new customPlugin[plugin.name](this.commandHandler.fChatLibInstance, this.commandHandler.channelName);
+                plugin.instantiatedPlugin = new customPlugin[plugin.name](this.commandHandler.fChatLibInstance, this.commandHandler.channelName);
                 let strAddedCommands = "";
 
-                for (let command of this.internalGetAllFuncs(plugin.instanciatedPlugin)) {
+                for (let command of this.internalGetAllFuncs(plugin.instantiatedPlugin)) {
                     strAddedCommands += "!" + command + ", ";
                 }
 
