@@ -31,6 +31,12 @@ myFchatBot.addInviteListener((data) => {
     }
 });
 
+myFchatBot.addPrivateMessageListener((data) => {
+    console.log(`Received a private message from ${data.character}:`);
+    console.log(data.message);
+    myFchatBot.sendPrivMessage(`Hey friend! I don't currently support private messages, please use my commands in a channel where I am present. Maybe someday I'll be more robust. Thanks!`, data.character);
+});
+
 // let names = ['Oney', 'Twoey', 'Threey', 'Fourey', 'Fivey', 'Sixy', 'Seveny', 'Eighty', 'Niney', 'Tenny'];
 // const numOfPlayers = 4;
 // let game = new OhNoGame();

@@ -44,6 +44,9 @@ module.exports.default = class OhNoGame {
     constructor() {
         this.deck;
         this.discards;
+        // holds confirmed and unconfirmed players
+        this.allPlayers = [];
+        // holds confirmed players only once the game starts
         this.players = [];
         this.currentPlayer;
         this.dealerIndex = 0;
@@ -52,6 +55,8 @@ module.exports.default = class OhNoGame {
         this.wildColor;
         this.isInProgress = false;
         this.draw4LastTurn;
+        this.results;
+        this.hasDrawnThisTurn;
         this.config = {
             startingHandSize: 7,
             targetScore: 500,
@@ -77,54 +82,102 @@ module.exports.default = class OhNoGame {
         return false;
     }
 
-    addPlayer(name) {
-        if (this.isInProgress && this.players.length >= this.config.maxPlayers) {
-            console.log(`Unable to add ${name}, already at the maximum of 10 players.`);
+    getApprovedPlayers() {
+        return this.allPlayers.filter(player => player.isApproved);
+    }
+
+    approvePlayer(nameOrIndex) {
+        let player = this.findPlayerWithName(nameOrIndex, this.allPlayers);
+        if (!player) player = this.allPlayers[nameOrIndex];
+        if (!player) {
+            console.log(`No player with name or index ${nameOrIndex} found.`);
             return false;
         }
-        for (let i = 0; i < this.players.length; i++) {
+        if (player.isApproved) {
+            console.log(`${player.getName()} is already approved.`);
+            return false;
+        }
+        if (this.getApprovedPlayers().length >= this.config.maxPlayers) {
+            console.log(`Unable to approved ${player.getName()}, already at the maximum of ${this.config.maxPlayers} approved players.`);
+            return false;
+        }
+        player.isApproved = true;
+        console.log(`Approved ${player.getName()}.`);
+        return true;
+    }
+
+    addPlayer(name) {
+        if (this.isInProgress && this.getApprovedPlayers().length >= this.config.maxPlayers) {
+            console.log(`Unable to add ${name}, already at the maximum of ${this.config.maxPlayers} approved players.`);
+            return false;
+        }
+        for (let i = 0; i < this.allPlayers.length; i++) {
+            let player = this.allPlayers[i];
             if (this.isInProgress) {
-                if (this.players[i].isBot) {
-                    this.players[i].isBot = false;
-                    console.log(`Unbotted ${this.players[i].getName()}.`);
+                if (player.isBot) {
+                    player.isBot = false;
+                    console.log(`Unbotted ${player.getName()}.`);
                     return true;
                 } else {
                     console.log(`Player is already added and not a bot`);
                     return false;
                 }
-            } else if (this.players[i].name === name) {
+            } else if (player.name === name) {
                 console.log(`Unable to add new player ${name}, a player with that name is already in the game.`);
                 return false;
             }
         }
-        this.players.push(new OhNoPlayer(name));
+        this.allPlayers.push(new OhNoPlayer(name));
         return true;
     }
 
-    // renamePlayer(index, newName) {
-    //     this.players[index].name = newName;
-    // }
+    renamePlayer(nameOrIndex, alias) {
+        let player = this.findPlayerWithName(nameOrIndex, this.allPlayers);
+        if (!player) player = this.allPlayers[nameOrIndex];
+        if (!player) {
+            console.log(`No player with name or index ${nameOrIndex} found.`);
+            return false;
+        }
+        for (let i = 0; i < this.allPlayers.length; i++) {
+            if (alias !== null && this.allPlayers.name === alias || this.allPlayers.alias === alias) {
+                console.log(`A player already exists with name or alias ${alias}.`);
+                return false;
+            }
+        }
+        player.setAlias(alias);
+        if (alias) {
+            console.log(`Gave ${player.name} new alias of ${player.getName()}.`);
+        } else {
+            console.log(`Removed alias from ${player.getName()}.`);
+        }
+        return true;
+    }
 
     removePlayer(nameOrIndex) {
-        let index = this.findIndexOfName(nameOrIndex);
+        let index = this.findIndexOfName(nameOrIndex, this.allPlayers);
         if (index === null) index = parseInt(nameOrIndex);
-        if (!Number.isInteger(index) || index < 0 || index >= this.players.length) {
+        if (!Number.isInteger(index) || index < 0 || index >= this.allPlayers.length) {
             console.log(`Erroneous index: ${index} from input ${nameOrIndex}`);
             return false;
         }
         if (!this.isInProgress) {
-            this.players.splice(index, 1);
+            this.allPlayers.splice(index, 1);
             console.log('Removed the player from index ' + index);
             return true;
         } else {
-            let player = this.players[index];
-            if (!player.isBot) {
-                player.isBot = true;
-                console.log('Set player to bot at index ' + index);
-                return true;
+            let player = this.allPlayers[index];
+            if (this.players.includes(player)) {
+                if (!player.isBot) {
+                    player.isBot = true;
+                    console.log('Set player to bot at index ' + index);
+                    return true;
+                }
+                console.log('Game is in progress, but given user is already a bot.');
+                return false;
             }
-            console.log('Game is in progress, but given user is already a bot.');
-            return false;
+            this.allPlayers.splice(i, 1);
+            console.log('Removed the player from index ' + index);
+            return true;
         }
         
     }
@@ -149,8 +202,21 @@ module.exports.default = class OhNoGame {
         return cards;
     }
 
+    pass() {
+        if (!this.hasDrawnThisTurn) {
+            this.currentPlayer.addToHand(this.drawOne());
+            console.log(`${this.currentPlayer.getName()} drew a card.`);
+            this.hasDrawnThisTurn = true;
+        } else {
+            console.log(`${this.currentPlayer.getName()} passes their turn.`);
+            this.updatePlayerIndex;
+        }
+    }
+
     startGame() {
         console.log(`The game is afoot! Have fun. :-)`);
+        this.results = '';
+        this.players = this.getApprovedPlayers();
         this.players.forEach(player => player.score = new OhNoScore());
         this.isInProgress = true;
         this.startRound();
@@ -176,12 +242,23 @@ module.exports.default = class OhNoGame {
         console.log();
         this.currentPlayer = this.players[this.playerIndex];
         console.log(`It is ${this.currentPlayer.getName()}'s turn.`);
-        for (let i = 0; i < this.currentPlayer.hand.length; i++) {
-            if (this.isCardPlayable(this.currentPlayer.hand[i])) return;
-        }
-        console.log(`${this.currentPlayer.getName()} can't play, and must draw a card!`);
-        this.currentPlayer.addToHand(this.drawOne());
-        this.updatePlayerIndex();
+        this.hasDrawnThisTurn = false;
+        // for (let i = 0; i < this.currentPlayer.hand.length; i++) {
+        //     if (this.isCardPlayable(this.currentPlayer.hand[i])) return;
+        // }
+        // console.log(`${this.currentPlayer.getName()} can't play, and must draw a card!`);
+        // let card = this.drawOne();
+        // if (this.isCardPlayable(card)) {
+        //     // should we return even if the card is not playable?
+        //     // that way a player could keep a playable card, and no one would know,
+        //     // BUT it could really slow down the game for the 90% of times when a
+        //     //  player would just pass anyway. Especially if they forget to pass and
+        //     //  everyone has to wait 10 minutes for their turn to auto-elapse...
+        //     // If we go that route, the `can't play and must draw` message above
+        //     //  would also not be displayed until the player chose to pass.
+        //     return;
+        // }
+        // this.updatePlayerIndex();
     }
 
     isCardPlayable(newCard, oldCard=null) {
@@ -192,13 +269,13 @@ module.exports.default = class OhNoGame {
         return newCard.rank === oldCard.rank;
     }
 
-    findPlayerWithName(name) {
-        return this.players[this.findIndexOfName(name)];
+    findPlayerWithName(name, array=this.players) {
+        return array[this.findIndexOfName(name, array)];
     }
 
-    findIndexOfName(name) {
-        for (let i = 0; i < this.players.length; i++) {
-            if (this.players[i].name === name) return i;
+    findIndexOfName(name, array=this.players) {
+        for (let i = 0; i < array.length; i++) {
+            if (array[i].name === name) return i;
         }
         return null;
     }
@@ -434,28 +511,29 @@ module.exports.default = class OhNoGame {
     }
 
     endGame(winners) {
+        let str = '';
         winners.sort((a, b) => b.score.getValue() - a.score.getValue());
         let highestScore = winners[0].score.getValue();
         console.log();
         if (highestScore >= this.config.targetScore) {
-            console.log(`${winners.map(player => player.getName()).join(', ')} ${highestScore > this.config.targetScore ? 'surpassed' : 'met'} the target score of ${this.config.targetScore} and won the game!!!`);
+            str += `${winners.map(player => player.getName()).join(', ')} ${highestScore > this.config.targetScore ? 'surpassed' : 'met'} the target score of ${this.config.targetScore} and won the game!!!`;
         } else {
-            console.log(`The game ended early, so ${winners.map(player => player.getName()).join(', ')} won with ${highestScore} points!`);
+            str += `The game ended early, so ${winners.map(player => player.getName()).join(', ')} won with ${highestScore} points!`;
         }
         console.log();
         if (winners.length === 1) {
-            console.log(`Winning total: ${winners[0].score.toString()}`);
+            str += `Winning total: ${winners[0].score.toString()}`;
         } else {
             let score = new OhNoScore();
-            console.log(`Winning totals:`);
+            str += `Winning totals:`;
             winners.forEach(winner => {
                 score.addScore(winner.score);
-                console.log(`    ${winner.getName()} scored ${winner.score.toString()}`).join('\n');
+                str += `\n    ${winner.getName()} scored ${winner.score.toString()}`;
             });
-            console.log(`Total score across all winners: ${score.getValue()}`);
+            str += `Total score across all winners: ${score.getValue()}`;
         }
-        console.log();
-        console.log(`Runners up:`);
+        str += `\n`;
+        str += `Runners up:`;
         let otherPlayerScores = [];
         this.players.forEach(player => {
             if (winners.includes(player)) return;
@@ -464,10 +542,12 @@ module.exports.default = class OhNoGame {
         otherPlayerScores.sort((a, b) => {
             return (b.total - a.total);
         });
-        console.log(otherPlayerScores.map(obj => `    ${obj.name} scored ${obj.total} points.`).join('\n'));
-        console.log();
-        console.log(`The game has ended, thanks for playing!`);
+        str += otherPlayerScores.map(obj => `    ${obj.name} scored ${obj.total} points.`).join('\n');
+        str += `\n`;
+        str += `The game has ended, thanks for playing!`;
         this.isInProgress = false;
+        console.log(str);
+        this.results = str;
     }
 
     dealHands() {

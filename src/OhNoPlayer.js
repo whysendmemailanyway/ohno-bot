@@ -7,10 +7,16 @@ module.exports.default = class OhNoPlayer {
         this.hasShouted = false;
         this.score = {};
         this.isBot = false;
+        this.isApproved = false;
+        this.alias = name;
     }
 
     getName() {
-        return this.name + (this.isBot ? ' (bot)' : '');
+        return this.alias + (this.isBot ? ' (bot)' : '');
+    }
+
+    setAlias(alias) {
+        this.alias = alias || this.name;
     }
 
     addToHand(cards) {

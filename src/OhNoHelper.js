@@ -3,6 +3,10 @@ class OhNoHelper {
         this.fChatClient = fChatClient;
     }
 
+    msgUser(text, username) {
+        this.fChatClient.sendPrivMessage(text, username);
+    }
+
     isUserMaster(data) {
         if(data.character == this.fChatClient.config.master){
             return true;
