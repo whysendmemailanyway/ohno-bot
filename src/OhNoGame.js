@@ -51,19 +51,48 @@ module.exports.default = class OhNoGame {
         this.goingClockwise;
         this.wildColor;
         this.isInProgress = false;
-        this.startingHandSize = 7;
         this.draw4LastTurn;
-        this.targetScore = 500;
-        this.maxPlayers = 10;
+        this.config = {
+            startingHandSize: 7,
+            targetScore: 500,
+            maxPlayers: 10
+        }
+    }
+
+    parseProp(property) {
+        let arr = property.split('=');
+        if (arr.length !== 2) {
+            console.log(`Bad parseProp input: ${property}`);
+            return false;
+        }
+        let key = arr[0];
+        let value = arr[1];
+        if (this.config.hasOwnProperty(key)) {
+            this.config[key] = value;
+            console.log(`Updated config ${key} to ${value}.`);
+            if (key === 'targetScore') this.checkForVictory();
+            return true;
+        }
+        console.log(`No such config property exists: ${key}`);
+        return false;
     }
 
     addPlayer(name) {
-        if (this.players.length >= 10) {
+        if (this.isInProgress && this.players.length >= this.config.maxPlayers) {
             console.log(`Unable to add ${name}, already at the maximum of 10 players.`);
             return false;
         }
         for (let i = 0; i < this.players.length; i++) {
-            if (this.players[i].name === name) {
+            if (this.isInProgress) {
+                if (this.players[i].isBot) {
+                    this.players[i].isBot = false;
+                    console.log(`Unbotted ${this.players[i].getName()}.`);
+                    return true;
+                } else {
+                    console.log(`Player is already added and not a bot`);
+                    return false;
+                }
+            } else if (this.players[i].name === name) {
                 console.log(`Unable to add new player ${name}, a player with that name is already in the game.`);
                 return false;
             }
@@ -72,12 +101,32 @@ module.exports.default = class OhNoGame {
         return true;
     }
 
-    renamePlayer(index, newName) {
-        this.players[index].name = newName;
-    }
+    // renamePlayer(index, newName) {
+    //     this.players[index].name = newName;
+    // }
 
-    removePlayer(index) {
-        this.players = this.players.splice(index, 1);
+    removePlayer(nameOrIndex) {
+        let index = this.findIndexOfName(nameOrIndex);
+        if (index === null) index = parseInt(nameOrIndex);
+        if (!Number.isInteger(index) || index < 0 || index >= this.players.length) {
+            console.log(`Erroneous index: ${index} from input ${nameOrIndex}`);
+            return false;
+        }
+        if (!this.isInProgress) {
+            this.players.splice(index, 1);
+            console.log('Removed the player from index ' + index);
+            return true;
+        } else {
+            let player = this.players[index];
+            if (!player.isBot) {
+                player.isBot = true;
+                console.log('Set player to bot at index ' + index);
+                return true;
+            }
+            console.log('Game is in progress, but given user is already a bot.');
+            return false;
+        }
+        
     }
 
     drawOne() {
@@ -101,6 +150,7 @@ module.exports.default = class OhNoGame {
     }
 
     startGame() {
+        console.log(`The game is afoot! Have fun. :-)`);
         this.players.forEach(player => player.score = new OhNoScore());
         this.isInProgress = true;
         this.startRound();
@@ -118,18 +168,18 @@ module.exports.default = class OhNoGame {
         this.wildColor = null;
         this.draw4LastTurn = false;
         this.dealHands();
-        console.log(`All players received ${this.startingHandSize} cards.`);
+        console.log(`All players received ${this.config.startingHandSize} cards.`);
         this.playCard(this.drawOne());
     }
 
     startTurn() {
         console.log();
         this.currentPlayer = this.players[this.playerIndex];
-        console.log(`It is ${this.currentPlayer.name}'s turn.`);
+        console.log(`It is ${this.currentPlayer.getName()}'s turn.`);
         for (let i = 0; i < this.currentPlayer.hand.length; i++) {
             if (this.isCardPlayable(this.currentPlayer.hand[i])) return;
         }
-        console.log(`${this.currentPlayer.name} can't play, and must draw a card!`);
+        console.log(`${this.currentPlayer.getName()} can't play, and must draw a card!`);
         this.currentPlayer.addToHand(this.drawOne());
         this.updatePlayerIndex();
     }
@@ -143,8 +193,12 @@ module.exports.default = class OhNoGame {
     }
 
     findPlayerWithName(name) {
+        return this.players[this.findIndexOfName(name)];
+    }
+
+    findIndexOfName(name) {
         for (let i = 0; i < this.players.length; i++) {
-            if (this.players[i].name === name) return this.players[i];
+            if (this.players[i].name === name) return i;
         }
         return null;
     }
@@ -158,12 +212,12 @@ module.exports.default = class OhNoGame {
     }
 
     handleDraw4() {
-        console.log(`${UTILS.titleCase(DECKDATA.RANK_WILD_DRAW_4)} was played on ${this.currentPlayer.name}! Waiting for them to accept or challenge...`);
+        console.log(`${UTILS.titleCase(DECKDATA.RANK_WILD_DRAW_4)} was played on ${this.currentPlayer.getName()}! Waiting for them to accept or challenge...`);
     }
 
     acceptDraw4() {
         let challengee = this.getPreviousPlayer();
-        console.log(`${this.currentPlayer.name} accepts ${challengee.name}'s ${this.discards.top().getName()}! They must draw 4 and miss their turn.`);
+        console.log(`${this.currentPlayer.getName()} accepts ${challengee.getName()}'s ${this.discards.top().getName()}! They must draw 4 and miss their turn.`);
         this.currentPlayer.addToHand(this.drawX(4));
         this.endTurn(true);
     }
@@ -184,25 +238,25 @@ module.exports.default = class OhNoGame {
         const d4name = UTILS.titleCase(DECKDATA.RANK_WILD_DRAW_4);
         if (this.discards.top().rank === DECKDATA.RANK_WILD_DRAW_4) {
             if (!this.draw4LastTurn) {
-                console.log(`${this.currentPlayer.name} tried to challenge the play, but the ${d4name} was not played on them.`);
+                console.log(`${this.currentPlayer.getName()} tried to challenge the play, but the ${d4name} was not played on them.`);
                 return;
             }
             let challengee = this.getPreviousPlayer();
-            console.log(`${this.currentPlayer.name} challenges ${challengee.name}'s ${this.discards.top().getName()}!`);
-            console.log(`${challengee.name} has the following cards in hand: ${challengee.handToString()}`);
+            console.log(`${this.currentPlayer.getName()} challenges ${challengee.getName()}'s ${this.discards.top().getName()}!`);
+            console.log(`${challengee.getName()} has the following cards in hand: ${challengee.handToString()}`);
             let oldCard = this.discards.top(2)[1];
             let canPlay = this.isDraw4Legal(challengee, oldCard);
             if (canPlay) {
-                console.log(`${challengee.name} played their ${d4name} illegally and must draw 4 cards!`);
+                console.log(`${challengee.getName()} played their ${d4name} illegally and must draw 4 cards!`);
                 challengee.addToHand(this.drawX(4));
                 this.endTurn(false);
             } else {
-                console.log(`${challengee.name} played their ${d4name} legally. Now ${this.currentPlayer.name} must draw 6 cards and miss their turn, ouch!!`);
+                console.log(`${challengee.getName()} played their ${d4name} legally. Now ${this.currentPlayer.getName()} must draw 6 cards and miss their turn, ouch!!`);
                 this.currentPlayer.addToHand(this.drawX(6));
                 this.endTurn(true);
             }
         } else {
-            console.log(`${this.currentPlayer.name} tried to challenge the play, but only ${d4name} can be challenged.`);
+            console.log(`${this.currentPlayer.getName()} tried to challenge the play, but only ${d4name} can be challenged.`);
         }
     }
 
@@ -211,11 +265,11 @@ module.exports.default = class OhNoGame {
         if (!player) player = this.players[nameOrIndex];
         if (!player) throw `Couldn't find player with name or index ${nameOrIndex}...`;
         if (player.hand.length !== 1) {
-            console.log(`${player.name}'s name was called, but they have more than one card in their hand.`);
+            console.log(`${player.getName()}'s name was called, but they have more than one card in their hand.`);
         } else if (player.hasShouted) {
-            console.log(`${player.name}'s name was called, but they already yelled.`);
+            console.log(`${player.getName()}'s name was called, but they already yelled.`);
         } else {
-            console.log(`${player.name}'s name was called before they yelled, they must draw two cards!`);
+            console.log(`${player.getName()}'s name was called before they yelled, they must draw two cards!`);
             player.addToHand(this.drawX(2));
         }
     }
@@ -223,13 +277,13 @@ module.exports.default = class OhNoGame {
     shout(player) {
         if (player.hand.length === 1) {
             if (player.hasShouted) {
-                console.log(`${player.name} has already called OhNo, no need to call it again...`);
+                console.log(`${player.getName()} has already called OhNo, no need to call it again...`);
             } else {
-                console.log(`${player.name} has shouted "OH NO!"`);
+                console.log(`${player.getName()} has shouted "OH NO!"`);
                 player.hasShouted = true;
             }
         } else {
-            console.log(`${player.name} tries to call OhNo, but still has ${player.hand.length} cards left. OhNo can only be called with one card in hand.`);
+            console.log(`${player.getName()} tries to call OhNo, but still has ${player.hand.length} cards left. OhNo can only be called with one card in hand.`);
         }
     }
 
@@ -283,15 +337,15 @@ module.exports.default = class OhNoGame {
                 return false;
             }
             player.removeFromHand(player.hand.indexOf(card));
-            console.log(`${player.name} played ${card.getName()}${card.isWild() ? ' and set the new color to ' + UTILS.titleCase(newWildColor) : ''}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
+            console.log(`${player.getName()} played ${card.getName()}${card.isWild() ? ' and set the new color to ' + UTILS.titleCase(newWildColor) : ''}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
             if (player.hand.length === 0) {
-                console.log(`${player.name} played their last card and won the round!`);
+                console.log(`${player.getName()} played their last card and won the round!`);
                 this.endRound();
                 return true;
             }
             if (withShout) this.shout(player);
         } else {
-            console.log(`${this.currentDealer.name} dealt ${card.getName()} as the starting card.`);
+            console.log(`${this.currentDealer.getName()} dealt ${card.getName()} as the starting card.`);
         }
         this.discards.addToTop(card);
         if (card.rank === DECKDATA.RANK_REVERSE) {
@@ -316,11 +370,11 @@ module.exports.default = class OhNoGame {
             return true;
         } else {
             if (card.rank === DECKDATA.RANK_SKIP) {
-                console.log(`${UTILS.titleCase(DECKDATA.RANK_SKIP)}! ${this.currentPlayer.name} misses their turn.`);
+                console.log(`${UTILS.titleCase(DECKDATA.RANK_SKIP)}! ${this.currentPlayer.getName()} misses their turn.`);
                 skip = true;
             } else if (card.rank === DECKDATA.RANK_DRAW_2) {
                 this.currentPlayer.addToHand(this.drawX(2));
-                console.log(`Aw, ${this.currentPlayer.name} had to draw 2 and miss their turn.`);
+                console.log(`Aw, ${this.currentPlayer.getName()} had to draw 2 and miss their turn.`);
                 skip = true;
             }
             this.endTurn(skip);
@@ -351,42 +405,73 @@ module.exports.default = class OhNoGame {
         });
         let score = new OhNoScore(cards);
         this.currentPlayer.score.addScore(score);
-        console.log(`${this.currentPlayer.name} scored ${score.getValue()} points this round: ${score.toString()}`);
+        console.log(`${this.currentPlayer.getName()} scored ${score.getValue()} points this round: ${score.toString()}`);
         let totalScore = this.currentPlayer.score.getValue();
         console.log(`This brings their total score to ${totalScore} points!`);
-        if (totalScore >= this.targetScore) {
-            this.endGame();
+        if (this.checkForVictory()) return;
+        this.dealerIndex += 1;
+        if (this.dealerIndex >= this.players.length) this.dealerIndex = 0;
+        console.log(`It is now ${this.players[this.dealerIndex].getName()}'s turn to deal.`);
+        this.startRound();
+    }
+
+    checkForVictory() {
+        let winners = this.players.filter(player => player.score.getValue() >= this.targetScore);
+        if (winners.length > 0) {
+            this.endGame(winners);
+            return true;
         } else {
-            this.dealerIndex += 1;
-            if (this.dealerIndex >= this.players.length) this.dealerIndex = 0;
-            console.log(`It is now ${this.players[this.dealerIndex].name}'s turn to deal.`);
-            this.startRound();
+            return false;
         }
     }
 
-    endGame() {
-        let totalScore = this.currentPlayer.score.getValue();
+    endPrematurely() {
+        let highestScore = players.reduce((highest, b) => {
+            if (b.score.getValue() > highest) return b;
+            return highest;
+        }, players[0].score.getValue());
+        this.endGame(this.players.filter(player => player.score.getValue() >= highestScore));
+    }
+
+    endGame(winners) {
+        winners.sort((a, b) => b.score.getValue() - a.score.getValue());
+        let highestScore = winners[0].score.getValue();
         console.log();
-        console.log(`${this.currentPlayer.name} ${totalScore > this.targetScore ? 'surpassed' : 'met'} the target score of ${this.targetScore} and won the game!!!`);
+        if (highestScore >= this.config.targetScore) {
+            console.log(`${winners.map(player => player.getName()).join(', ')} ${highestScore > this.config.targetScore ? 'surpassed' : 'met'} the target score of ${this.config.targetScore} and won the game!!!`);
+        } else {
+            console.log(`The game ended early, so ${winners.map(player => player.getName()).join(', ')} won with ${highestScore} points!`);
+        }
         console.log();
-        console.log(`Winner's total: ${this.currentPlayer.score.toString()}`);
+        if (winners.length === 1) {
+            console.log(`Winning total: ${winners[0].score.toString()}`);
+        } else {
+            let score = new OhNoScore();
+            console.log(`Winning totals:`);
+            winners.forEach(winner => {
+                score.addScore(winner.score);
+                console.log(`    ${winner.getName()} scored ${winner.score.toString()}`).join('\n');
+            });
+            console.log(`Total score across all winners: ${score.getValue()}`);
+        }
         console.log();
         console.log(`Runners up:`);
         let otherPlayerScores = [];
         this.players.forEach(player => {
-            if (player === this.currentPlayer) return;
-            otherPlayerScores.push({name: player.name, total: player.score.getValue()});
+            if (winners.includes(player)) return;
+            otherPlayerScores.push({name: player.getName(), total: player.score.getValue()});
         });
         otherPlayerScores.sort((a, b) => {
             return (b.total - a.total);
         });
         console.log(otherPlayerScores.map(obj => `    ${obj.name} scored ${obj.total} points.`).join('\n'));
         console.log();
+        console.log(`The game has ended, thanks for playing!`);
         this.isInProgress = false;
     }
 
     dealHands() {
-        for (let i = 0; i < this.startingHandSize; i++) {
+        for (let i = 0; i < this.config.startingHandSize; i++) {
             this.players.forEach(player => player.addToHand(this.drawOne()));
         }
     }

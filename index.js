@@ -16,6 +16,21 @@ let myFchatBot = new FChatLib(options);
 
 myFchatBot.connect();
 
+myFchatBot.addInviteListener((data) => {
+    // Example data:
+    // { name: 'ADH-70c727f76bf77214cd76', sender: 'Tom_Kat', title: 'test2' }
+    if (data.sender === myFchatBot.config.master && data.name.substring(0, 4).toLowerCase() === 'adh-') {
+        console.log(`Joining ${data.title}...`);
+        myFchatBot.joinNewChannel(data.name);
+        myFchatBot.commandHandlers[data.name].loadplugin('OhNo', {character: myFchatBot.config.master, channel: data.name});
+        // setTimeout(() => {
+        //     myFchatBot.commandHandlers[data.name].loadplugin('OhNo', {character: myFchatBot.config.master, channel: data.name});
+        // }, 3000);
+    } else {
+        console.log(`Ignoring invite: ${JSON.stringify(data)}`);
+    }
+});
+
 // let names = ['Oney', 'Twoey', 'Threey', 'Fourey', 'Fivey', 'Sixy', 'Seveny', 'Eighty', 'Niney', 'Tenny'];
 // const numOfPlayers = 4;
 // let game = new OhNoGame();

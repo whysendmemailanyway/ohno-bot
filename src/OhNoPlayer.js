@@ -9,6 +9,10 @@ module.exports.default = class OhNoPlayer {
         this.isBot = false;
     }
 
+    getName() {
+        return this.name + (this.isBot ? ' (bot)' : '');
+    }
+
     addToHand(cards) {
         let arr = [];
         if (Array.isArray(cards)) {

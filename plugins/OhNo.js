@@ -6,113 +6,177 @@ class OhNo {
         this.channel = channel;
         this.fChatClient = fChatClient;
         this.helper = new OhNoHelper(this.fChatClient);
-        this.games = {};
-        for(let channel of this.fChatClient.channels.keys()) {
-            this.games[channel] = new OhNoGame();
-        };
-        fChatClient.addInviteListener((data) => {
-            // Example data:
-            // { name: 'ADH-70c727f76bf77214cd76', sender: 'Tom_Kat', title: 'test2' }
-            if (data.sender === this.fChatClient.config.master && data.name.substring(0, 4).toLowerCase() === 'adh-') {
-                console.log(`Joining ${data.title}...`);
-                this.fChatClient.joinNewChannel(data.name);
-            } else {
-                console.log(`Ignoring invite: ${JSON.stringify(data)}`);
-            }
-        });
+        this.game = new OhNoGame();
+        this.defaultMessage = `I am broken... sorry!`;
 
         this.aliases = {
             addp: this.addplayer,
             addplayers: this.addplayer,
+            confg: this.configuregame,
             removep: this.removeplayer,
             removeplayers: this.removeplayer,
-            listp: this.listplayers
+            remp: this.removeplayer,
+            delp: this.removeplayer,
+            listp: this.listplayers,
+            sc: this.shortcuts,
+            shortc: this.shortcuts,
+            scuts: this.shortcuts,
+            startg: this.startgame,
+            start: this.startgame,
+            endg: this.endgame,
+            end: this.endgame,
+            // dirty debug, does whatever i wants it to does
+            ddbug: (args, data) => {
+                console.log(args, data);
+            }
         }
     }
 
-    addplayer = (args, data) => {
+    configuregame = (args, data) => {
         if (!this.helper.isUserChatOP(data)) return;
-        let game = this.games[data.channel];
-        let successes = 0;
-        let failures = 0;
-        let currentUsers = this.fChatClient.getUserList(data.channel);
-        args.split(', ').forEach(username => {
-            if (currentUsers.includes(username) && game.addPlayer(username)) {
+        if (this.helper.insufficientArgs(args)) {
+            this.helper.msgRoom(`The !configuregame command is used to specify certain properties on the game object: startingHandSize, targetScore, and maxPlayers. These can be set at any time, even when a game is in progress, and setting targetScore below a player's current score will immediately end the game. Usage: !configuregame key1=value1, key2=value2, etc`, data.channel);
+            return;
+        }
+        args.split(', ').forEach(prop => {
+            if (this.game.parseProp(prop)) {
                 successes++;
             } else {
                 failures++;
             }
         });
+        let str = this.defaultMessage;
         if (failures === 0) {
-            this.helper.msgRoom(`Added ${successes} players to the game. Total players is now ${game.players.length}.`, data.channel);
+            str = `Updated ${successes} configuration properties.`;
         } else if (successes === 0) {
-            this.helper.msgRoom(`Failed to add any players to game, check your syntax! Make sure the names are spelled correctly and the players are in the room. ...am I broken? ' ^ '`, data.channel);
+            str = `Failed to update any configuration properties, check your syntax!`;
         } else {
-            this.helper.msgRoom(`Successfully added ${successes} player${successes === 1 ? '' : 's'} to the game, failed to add ${failures} player${failures === 1 ? '' : 's'} to the game. Maybe some players were already in the game, or the names were misspelled, or they aren't in the room. Current players: ${game.players.map(player => player.name).join(' ')}`, data.channel);
+            str = `Successfully updated ${successes} configuration propert${successes === 1 ? 'y' : 'ies'} to the game, failed to update ${failures} configuration propert${failures === 1 ? 'y' : 'ies'} to the game.`;
         }
+        this.helper.msgRoom(str, data.channel);
     }
 
-    removeplayer = (username, data) => {
+    startgame = (args, data) => {
         if (!this.helper.isUserChatOP(data)) return;
-        let game = this.games[data.channel];
-        console.log(`Removing ${username} from game in ${data.channel}...`);
-        // * Find if user with username is in channel
-        // * Make sure they're in the game
-        // * If no game is in progress, remove them from the game
-        // * If game is in progress, replace them with bot player
+        if (this.helper.helpArgs()) {
+            this.helper.msgRoom(`The !startgame command begins a new game of OhNo with the current players. Usage: !startgame`, data.channel);
+            return;
+        }
+        let str = this.defaultMessage;
+        if (this.game.isInProgress) {
+            str = `The game is already in progress. Please finish or end the current game before starting a new one. You can prematurely end the game with the !endgame command.`;
+        } else if (this.game.players.length < 2) {
+            str = `You need at least two players in the game before you can start it. Currently, there ${this.game.players.length === 0 ? 'are no' : 'is only one'} player in the game. Use the !addplayer command to add more.`;
+        } else {
+            this.game.startGame();
+            str = 'oh my a new game idk wat 2 do halp';
+            // TODO: start the game!!!
+            // * PM each player to show them their starting hand; for the player who's turn it is, let them know how to enter their play
+            // * set str to show who dealt and which card was turned up; let players know they should have been PM'd
+        }
+        this.helper.msgRoom(str, data.channel);
+    }
+
+    endgame = (args, data) => {
+        if (!this.helper.isUserChatOP(data)) return;
+        if (this.helper.helpArgs()) {
+            this.helper.msgRoom(`The !endgame command ends the current game of OhNo. The player with the highest score is considered the winner. Usage: !endgame`, data.channel);
+            return;
+        }
+        let str = this.defaultMessage;
+        if (this.game.isInProgress) {
+            this.game.endPrematurely();
+            str = 'game over rip';
+            // TODO: report results
+        } else {
+            str = `There is no game in progress. Start one with !startgame`;
+        }
+        this.helper.msgRoom(str, data.channel);
+    }
+
+    shortcuts = (args, data) => {
+        if (this.helper.helpArgs()) {
+            this.helper.msgRoom(`The !shortcuts command shows aliases for existing commands. Usage: !shortcuts`, data.channel);
+            return;
+        }
+        let s = [
+            '!addplayer: !addplayers, !addp.',
+            '!configuregame: !confg.',
+            '!listplayers: !listp.',
+            '!removeplayer: !removeplayers, !removep, !remp, !delp.',
+            '!shortcuts: !shortc, !scuts, !sc.',
+            '!startgame: !startg, !start.',
+            '!endgame: !endg, !end.'
+        ]
+        this.helper.msgRoom(s.join(' '), data.channel);
+    }
+
+    addplayer = (args, data) => {
+        // TODO: implement a confirm functionality.
+        // Players should have to enter a specific command to join a game.
+        // Otherwise, it's not cool to send them private messages.
+        if (!this.helper.isUserChatOP(data)) return;
+        if (this.helper.insufficientArgs(args)) {
+            this.helper.msgRoom(`The !addplayer command does one of two things depending on whether a game is in progress. If the game is in progress, specified users replace their botified selves. If the game is not in progress, specified users are added to the game. Usage: !addplayer name1, name2, etc`, data.channel);
+            return;
+        }
+        let successes = 0;
+        let failures = 0;
+        args.split(', ').forEach(username => {
+            if (this.helper.isUserInChannel(username, data.channel) && this.game.addPlayer(username)) {
+                successes++;
+            } else {
+                failures++;
+            }
+        });
+        let str = this.defaultMessage;
+        if (failures === 0) {
+            str = `Added ${successes} player${successes === 1 ? '' : 's'} to the game. Total players is now ${this.game.players.length}.`;
+        } else if (successes === 0) {
+            str = `Failed to add any players to the game, check your syntax! Make sure the names are spelled correctly and the players are in the room.`;
+        } else {
+            str = `Successfully added ${successes} player${successes === 1 ? '' : 's'} to the game, failed to add ${failures} player${failures === 1 ? '' : 's'} to the game. Maybe some players were already in the game, or the names were misspelled, or they aren't in the room.`;
+        }
+        this.helper.msgRoom(str, data.channel);
+    }
+
+    removeplayer = (args, data) => {
+        if (!this.helper.isUserChatOP(data)) return;
+        if (this.helper.insufficientArgs(args)) {
+            this.helper.msgRoom(`The !removeplayer command does one of two things depending on whether a game is in progress. If the game is in progress, specified users are converted to bots. If the game is not in progress, specified users are removed from the game completely. Usage: !removeplayer name1, name2, etc`, data.channel);
+            return;
+        }
+        let successes = 0;
+        let failures = 0;
+        args.split(', ').forEach(username => {
+            if (this.game.removePlayer(username)) {
+                successes++;
+            } else {
+                failures++;
+            }
+        });
+        let str = this.defaultMessage;
+        if (failures === 0) {
+            str = `Removed ${successes} player${successes === 1 ? '' : 's'} from the game. Total players is now ${this.game.players.length}.`;
+        } else if (successes === 0) {
+            str = `Failed to remove any players from the game, check your syntax! Make sure the names are spelled correctly and the players are in the game.`;
+        } else {
+            str = `Successfully removed ${successes} player${successes === 1 ? '' : 's'} from the game, failed to remove ${failures} player${failures === 1 ? '' : 's'} to the game. Maybe some players were not in the game, or the names were misspelled, or they aren't in the room.`;
+        }
+        this.helper.msgRoom(str, data.channel);
     }
 
     listplayers = (args, data) => {
-        let game = this.games[data.channel];
-        if (game.players.length === 0) {
-            this.helper.msgRoom(`There are no players yet. Add some with !addplayer`, data.channel);
+        if (this.helper.helpArgs()) {
+            this.helper.msgRoom(`The !listplayers command shows all players who are currently in the game. Usage: !listplayers`, data.channel);
+            return;
+        }
+        if (this.game.players.length === 0) {
+            this.helper.msgRoom(`There are no players yet. Add some with !addplayer name1, name2, etc`, data.channel);
         }else {
-            this.helper.msgRoom(`Starting with the first player and going clockwise: ${game.players.map(player => player.name).join(' ')}`, data.channel);
+            this.helper.msgRoom(`Starting with the first player and going clockwise: ${this.game.players.map(player => player.name).join(', ')}.`, data.channel);
         }
     }
-
-    // dirty debug, does whatever i wants it to does
-    ddbug(args, data) {
-        console.log(args, data);
-        console.log(this.fChatClient.channels);
-    }
-
-    //Commands
-    // this.guide = function (args, data) {
-    //     console.log(data);
-    //     var message = "Here's a few things to start: \n";
-    //     message += "The command received the following args: "+JSON.stringify(args)+"\n";
-    //     message += "The command received the following data: "+JSON.stringify(data)+"\n";
-    //     message += "The character who sent the message is:"+data.character+"\n";
-    //     message += "The message was received in the channel:"+data.channel+ " and it's also passed everytime here: "+this.channel+"\n";
-    //     message += "You can call functions outside of the scope: "+getRandomInt(0,10)+"\n";
-    //     message += "And you'll also be able to do things from there, like rolling a die. "+rollDie()+"\n";
-    //     message += "The users in the room are: "+this.fChatClient.getUserList(this.channel)+"\n";
-    //     message += "Here's the list of all the users, in all the room the bot is connected to: "+JSON.stringify(this.fChatClient.getAllUsersList())+"\n";
-    //     message += "The operators in this room are: "+JSON.stringify(this.fChatClient.getChatOPList(this.channel))+ "\n";
-    //     message += "As you will see in a few seconds, the results of the die roll will be shown. There are many actions that you can listen on by passing a function to them, here's the list:\n";
-    //     message += "addMessageListener, addOfflineListener, addLeaveListener, addJoinListener, addChatOPAddedListener, addChatOPRemovedListener, addInitialChannelDataListener\n";
-    //     message += "Alright, you must be ready now. You don't have to re-run the bot each time you update the plugin, just do !reloadplugins in the chat!";
-    //     this.fChatClient.sendMessage(message, this.channel);
-    // };
-
-    //Listener for events
-    // this.fChatClient.addRollListener(function(data){
-    //     this.sendMessage("Oh! Someone rolled a die! They rolled a "+data.endresult+" but here's the data: "+JSON.stringify(data), data.channel);
-    // });
-
-    // this.fChatClient.addJoinListener(function(data){
-    //     this.sendMessage("Yay, someone joined the channel! Welcome "+data.character.identity, data.channel);
-    // });
 };
-
-// var getRandomInt = function(min, max) {
-//     return Math.floor(Math.random() * (max - min)) + min;
-// };
-
-// var rollDie = function() {
-//     this.fChatClient.roll("1d6", channel);
-//     return "I rolled a die, and since I added a listener with the addRollListener method, I'll be able to know who rolled, and what's the result!";
-// };
 
 module.exports.OhNo = OhNo;

@@ -27,11 +27,11 @@ export default class CommandHandler{
         if (data && data.message && data.message.length > 2 && data.message[0] == '!') {
 
             let opts = {
-                command: String(data.message.split(' ')[0]).replace('!', '').trim(),
+                command: String(data.message.split(' ')[0]).replace('!', '').trim().toLowerCase(),
                 argument: data.message.substring(String(data.message.split(' ')[0]).length).trim()
             };
 
-            if (opts.command != "processCommand") {
+            if (opts.command != "processCommand".toLowerCase()) {
 
                 let found = false;
 

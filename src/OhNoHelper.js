@@ -1,29 +1,41 @@
 class OhNoHelper {
-    constructor (fChatLibInstance) {
-        this.fChatLibInstance = fChatLibInstance;
+    constructor (fChatClient) {
+        this.fChatClient = fChatClient;
     }
 
     isUserMaster(data) {
-        if(data.character == this.fChatLibInstance.config.master){
+        if(data.character == this.fChatClient.config.master){
             return true;
         }
         else{
-            this.fChatLibInstance.sendMessage('You don\'t have sufficient rights.', data.channel);
+            this.fChatClient.sendMessage('You don\'t have sufficient rights.', data.channel);
             return false;
         }
     }
     
     isUserChatOP(data) {
-        if(this.fChatLibInstance.isUserChatOP(data.character, data.channel)){
+        if(this.fChatClient.isUserChatOP(data.character, data.channel)){
             return true;
         } else {
-            this.fChatLibInstance.sendMessage('You don\'t have sufficient rights.', data.channel);
+            this.fChatClient.sendMessage('You don\'t have sufficient rights.', data.channel);
             return false;
         }
     }
 
     msgRoom(text, channel) {
-        this.fChatLibInstance.sendMessage(text, channel);
+        this.fChatClient.sendMessage(text, channel);
+    }
+
+    isUserInChannel(username, channel) {
+        return this.fChatClient.getUserList(channel).includes(username);
+    }
+
+    helpArgs(args) {
+        return (args === '?' || args === 'help' || args === 'h');
+    }
+
+    insufficientArgs(args) {
+        return (!args || args.length === 0 || this.helpArgs(args));
     }
 };
 
