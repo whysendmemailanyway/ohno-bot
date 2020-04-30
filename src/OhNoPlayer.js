@@ -77,4 +77,18 @@ module.exports.default = class OhNoPlayer {
     handToString() {
         return this.hand.map(card => card ? card.getName() : 'ERROR').join(', ');
     }
+
+    findCardByName(name) {
+        for (let i = 0; i < this.hand.length; i++) {
+            let card = this.hand[i];
+            let cname = '' + card.getName();
+            let index = cname.indexOf(' (');
+            if (index !== -1) {
+                cname = cname.substring(0, index);
+            }
+            if (cname.toLowerCase() === name.toLowerCase()) return card;
+        }
+        console.log(`Unable to find card with name ${name} in ${this.getName()}'s hand. Hand: ${this.handToString()}`);
+        return null;
+    }
 }

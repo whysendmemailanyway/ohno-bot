@@ -72,6 +72,19 @@ module.exports.default = class OhNoGame {
         }
     }
 
+    parsePlay(args) {
+        let match = this.matcher.exec(args);
+        if (!match) {
+            console.log(match);
+            return match;
+        }
+        let response = {};
+        for (let group in match.groups) {
+            response[group] = match.groups[group];
+        }
+        return response;
+    }
+
     parseProp(property) {
         let arr = property.split('=');
         if (arr.length !== 2) {
@@ -211,6 +224,7 @@ module.exports.default = class OhNoGame {
     }
 
     pass() {
+        this.results = '';
         if (!this.hasDrawnThisTurn) {
             this.currentPlayer.addToHand(this.drawOne());
             console.log(`${this.currentPlayer.getName()} drew a card.`);
@@ -292,14 +306,14 @@ module.exports.default = class OhNoGame {
     }
 
     handleDraw4() {
-        return `${UTILS.titleCase(DECKDATA.RANK_WILD_DRAW_4)} was played on ${this.currentPlayer.getName()}! Waiting for them to accept or challenge...`;
+        return `${UTILS.titleCase(DECKDATA.RANK_WILD_DRAW_4)} was played on ${this.currentPlayer.getName()}! Waiting for them to !accept or !challenge...`;
     }
 
     acceptDraw4() {
         let challengee = this.getPreviousPlayer();
-        console.log(`${this.currentPlayer.getName()} accepts ${challengee.getName()}'s ${this.discards.top().getName()}! They must draw 4 and miss their turn.`);
         this.currentPlayer.addToHand(this.drawX(4));
         this.endTurn(true);
+        this.results = `${this.currentPlayer.getName()} accepts ${challengee.getName()}'s ${this.discards.top().getName()}! They draw 4 cards and miss their turn.`;
     }
 
     isDraw4Legal(player, oldCard) {
@@ -315,29 +329,31 @@ module.exports.default = class OhNoGame {
     }
 
     challengeDraw4() {
+        let messages = [];
         const d4name = UTILS.titleCase(DECKDATA.RANK_WILD_DRAW_4);
         if (this.discards.top().rank === DECKDATA.RANK_WILD_DRAW_4) {
             if (!this.draw4LastTurn) {
-                console.log(`${this.currentPlayer.getName()} tried to challenge the play, but the ${d4name} was not played on them.`);
+                messages.push(`${this.currentPlayer.getName()} tried to challenge the play, but the ${d4name} was not played on them.`);
                 return;
             }
             let challengee = this.getPreviousPlayer();
-            console.log(`${this.currentPlayer.getName()} challenges ${challengee.getName()}'s ${this.discards.top().getName()}!`);
-            console.log(`${challengee.getName()} has the following cards in hand: ${challengee.handToString()}`);
+            messages.push(`${this.currentPlayer.getName()} challenges ${challengee.getName()}'s ${this.discards.top().getName()}!`);
+            messages.push(`\n${challengee.getName()} has the following cards in hand: ${challengee.handToString()}\n`);
             let oldCard = this.discards.top(2)[1];
             let canPlay = this.isDraw4Legal(challengee, oldCard);
             if (canPlay) {
-                console.log(`${challengee.getName()} played their ${d4name} illegally and must draw 4 cards!`);
+                messages.push(`${challengee.getName()} played their ${d4name} illegally now draws 4 cards!`);
                 challengee.addToHand(this.drawX(4));
                 this.endTurn(false);
             } else {
-                console.log(`${challengee.getName()} played their ${d4name} legally. Now ${this.currentPlayer.getName()} must draw 6 cards and miss their turn, ouch!!`);
+                messages.push(`${challengee.getName()} played their ${d4name} legally. Now ${this.currentPlayer.getName()} draws 6 cards and misses their turn, ouch!!`);
                 this.currentPlayer.addToHand(this.drawX(6));
                 this.endTurn(true);
             }
         } else {
-            console.log(`${this.currentPlayer.getName()} tried to challenge the play, but only ${d4name} can be challenged.`);
+            messages.push(`${this.currentPlayer.getName()} tried to challenge the play, but only ${d4name} can be challenged.`);
         }
+        return this.setResultsWithArray(messages);
     }
 
     // callOutPlayer(nameOrIndex) {
@@ -354,7 +370,6 @@ module.exports.default = class OhNoGame {
     //     }
     // }
 
-    // TODO: implement player shouting via chat
     // TODO: implement bot shouting?
     shout(player) {
         let playerInDanger = null;
@@ -464,7 +479,7 @@ module.exports.default = class OhNoGame {
         if (card.rank === DECKDATA.RANK_WILD_DRAW_4) {
             this.wildColor = newWildColor;
             this.draw4LastTurn = true;
-            this.messagse.push(this.handleDraw4());
+            messages.push(this.handleDraw4());
             this.setResultsWithArray(messages);
             return true;
         } else {

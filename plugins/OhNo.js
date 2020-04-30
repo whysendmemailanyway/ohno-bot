@@ -14,6 +14,8 @@ class OhNo {
         this.aliases = {
             //addp: this.addplayer,
             //addplayers: this.addplayer,
+            accept: this.acceptb4,
+            challenge: this.challengeb4,
             confg: this.configuregame,
             
             removep: this.removeplayer,
@@ -56,6 +58,8 @@ class OhNo {
         }
         let s = [
             //'!addplayer: !addplayers, !addp.',
+            '!acceptb4: !accept',
+            '!challengeb4: !challenge',
             '!configuregame: !confg.',
             '!endgame: !stopgame, !stopg, !stop, !endg, !end.',
             '!joingame: !joing, !join',
@@ -67,6 +71,44 @@ class OhNo {
             '!startround: !startr.'
         ]
         this.helper.msgRoom(s.join(' '), data.channel);
+    }
+
+    acceptb4 = (args, data) => {
+        if (this.helper.helpArgs(args)) {
+            this.helper.msgRoom(`The !acceptb4 command is used when a Wild Breed 4 has been played on you and you do not wish to challenge it. Permission: any player who would have to draw 4 cards as a result of someone playing Wild Breed 4. Usage: !acceptb4`, data.channel);
+            return;
+        }
+        let str = this.defaultMessage;
+        let name = data.character;
+        let player = this.game.findPlayerWithName(name);
+        if (player === null) {
+            str = `You can't accept, ${name}, you are not a player in the current game.`;
+        } else if (this.game.currentPlayer !== player) {
+            str = `You can't accept, ${player.getName()}, it is not your turn.`;
+        } else {
+            this.game.acceptDraw4();
+            str = this.helper.promptCurrentPlayer();
+        }
+        this.helper.msgRoom(str, data.channel);
+    }
+
+    challengeb4 = (args, data) => {
+        if (this.helper.helpArgs(args)) {
+            this.helper.msgRoom(`The !challengeb4 command is used when you think a Wild Breed 4 has been played on you illegally (e.g, they could have played a non-wild card instead of the Wild Breed 4). Only the player who has to draw 4 cards can challenge the player who played it. If a player is challenged, they must reveal their hand; if any non-wild cards could have been played instead of the Wild Breed 4, the player who played the Wild Breed 4 must draw 4 cards, and the other player may take their turn. However, if they played the Wild Breed 4 legally, the player who challenged must draw 6 cards and miss their turn. Permission: any player who would have to draw 4 cards as a result of someone playing Wild Breed 4. Usage: !challengeb4`, data.channel);
+            return;
+        }
+        let str = this.defaultMessage;
+        let name = data.character;
+        let player = this.game.findPlayerWithName(name);
+        if (player === null) {
+            str = `You can't challenge, ${name}, you are not a player in the current game.`;
+        } else if (this.game.currentPlayer !== player) {
+            str = `You can't challenge, ${player.getName()}, it is not your turn.`;
+        } else {
+            this.game.challengeDraw4();
+            str = this.helper.promptCurrentPlayer();
+        }
+        this.helper.msgRoom(str, data.channel);
     }
 
     // TODO: timeouts. if a player does not respond within the timeout, botify them.
@@ -90,15 +132,33 @@ class OhNo {
 
     play = (args, data) => {
         if (this.helper.insufficientArgs(args)) {
-            this.helper.msgRoom(`The !play command is used to . Permission: any (on your turn only). Usage: !play cardName [shout] [wildColor]`, data.channel);
+            this.helper.msgRoom(`The !play command is used to play a card. Permission: any (on your turn only). Usage: !play cardName [wildColor] [shout]`, data.channel);
             return;
         }
-        let arr = args.split(', ');
+        let username = data.character;
         let str = this.defaultMessage;
-        // TODO: PARSE THE INPUT... eek
-        // attempt to play selected card (with isShout and wildColor if necessary)
-        // if successful, output the play and promptCurrentPlayer();
-        // if unsuccessful, PM the current player so they can try again.
+        let player = this.game.findPlayerWithName(username);
+        if (!player) {
+            str = `${username} can't make a play right now, they are not an active player in the current game.`;
+        } else if (this.game.currentPlayer !== player) {
+            str = `Wait until it's your turn, ${player.getName()}!`;
+        } else {
+            let commandObj = this.game.parsePlay(args);
+            if (!commandObj) {
+                str = `There was an error parsing your command, please try different syntax.`;
+                failed = true;
+            } else {
+                let play = {
+                    card: player.findCardByName(commandObj.cardname),
+                    wildColor: commandObj.wildcolor || null,
+                    withShout: commandObj.shout || false
+                }
+                console.log(`Parsed player's play as:`);
+                console.log(play);
+                failed = this.game.playCard(play.card, player, play.wildColor, play.withShout);
+                str = this.game.results;
+            }
+        }
         this.helper.msgRoom(str, data.channel);
     }
 
@@ -118,6 +178,7 @@ class OhNo {
         } else {
             this.game.pass();
             str = `${this.game.currentPlayer.getName()} drew a card. Use !play to play it, or !pass to pass your turn.`;
+            str += this.helper.promptCurrentPlayer();
         }
         this.helper.msgRoom(str, data.channel);
     }
@@ -138,8 +199,8 @@ class OhNo {
         } else {
             let oldName = this.game.currentPlayer.getName();
             this.game.pass();
-            str = `${oldName} passed their turn, it is now ${this.game.currentPlayer}'s turn. Play a card with !play, or draw a card with !draw.`;
-            // TODO: PM the current player their hand
+            str = `${oldName} passed their turn.`;
+            str += this.helper.promptCurrentPlayer();
         }
         this.helper.msgRoom(str, data.channel);
     }
@@ -293,40 +354,6 @@ class OhNo {
         }
         this.helper.msgRoom(str, data.channel);
     }
-
-    // too powerful; we don't want to ping people who haven't explicitly joined the game
-    // addplayer = (args, data) => {
-    //     // TODO: implement a confirm functionality.
-    //     // Players should have to enter a specific command to join a game.
-    //     // Otherwise, it's not cool to send them private messages.
-    //     if (!this.helper.isUserChatOP(data)) return;
-    //     if (this.helper.insufficientArgs(args)) {
-    //         this.helper.msgRoom(`The !addplayer command does one of two things depending on whether a game is in progress. If the game is in progress, specified users replace their botified selves. If the game is not in progress, specified users are added to the game. Usage: !addplayer name1, name2, etc`, data.channel);
-    //         return;
-    //     }
-    //     let successes = 0;
-    //     let failures = 0;
-    //     args.split(', ').forEach(username => {
-    //         if (this.helper.isUserInChannel(username, data.channel) && this.game.addPlayer(username)) {
-    //             successes++;
-    //             if (username === data.character) {
-    //                 this.game.findPlayerWithName(username).isApproved = true;
-    //                 console.log(`Automatically confirmed ${username} since they added themselves.`);
-    //             }
-    //         } else {
-    //             failures++;
-    //         }
-    //     });
-    //     let str = this.defaultMessage;
-    //     if (failures === 0) {
-    //         str = `Added ${successes} player${successes === 1 ? '' : 's'} to the game. Total players is now ${this.game.players.length}.`;
-    //     } else if (successes === 0) {
-    //         str = `Failed to add any players to the game, check your syntax! Make sure the names are spelled correctly and the players are in the room.`;
-    //     } else {
-    //         str = `Successfully added ${successes} player${successes === 1 ? '' : 's'} to the game, failed to add ${failures} player${failures === 1 ? '' : 's'} to the game. Maybe some players were already in the game, or the names were misspelled, or they aren't in the room.`;
-    //     }
-    //     this.helper.msgRoom(str, data.channel);
-    // }
 
     removeplayer = (args, data) => {
         if (this.helper.insufficientArgs(args)) {

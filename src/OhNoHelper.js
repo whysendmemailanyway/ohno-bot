@@ -8,6 +8,7 @@ class OhNoHelper {
     }
 
     msgUser(text, username) {
+        // TODO: if any output exceeds the character limit, break it into multiple posts separated by 1 second each.
         this.fChatClient.sendPrivMessage(text, username);
     }
 
@@ -49,6 +50,8 @@ class OhNoHelper {
 
     promptCurrentPlayer() {
         // TODO: handle bots playing to completion
+        // is this even fair? technically, I should handle each bot's
+        // turn separately so that players have a chance to !shout...
         let str = this.game.results + ` `;
         while (this.game.currentPlayer.isBot && this.game.isRoundInProgress) {
             let player = this.game.currentPlayer;
@@ -84,17 +87,24 @@ class OhNoHelper {
         let player = this.game.currentPlayer;
         if (!player.isBot) {
             let name = player.getName();
-            // TODO: draw 4 challenging
-            // TODO: if the player cannot play, let them know.
-            // TODO: remind players that drawing is an option even if they can play
             str += `It is ${name}'s turn to play on ${this.game.discards.top().getName()}. PM'ing them with their hand... `;
             let privateString = `[b]Current game: ${this.channel}[/b]\n`;
             privateString += `The top discard is ${this.game.discards.top().getName()}. Your hand:\n`;
             privateString += `    ${player.handToString()}\n`;
-            privateString += `To play a card, enter this command in ${this.channel}: !play cardname\n`;
-            privateString += `Examples: !play blonde bunny, !play brown reverse, !play wild breed 4 white, !play black cat shout\n`;
-            privateString += `When playing your next to last card, make sure to include "shout" in the !play command. If you forget, you can use the !shout command after the fact, but make sure to do it before someone calls you out!`;
-            privateString += ` When playing a wild or wild breed 4 card, make sure to include the color you want in the same command.`;
+            if (this.game.canPlayerPlay() === false) {
+                privateString += `\n\nYou currently have no playable cards.`;
+                if (this.game.hasDrawnThisTurn) {
+                    privateString += ` Use the !pass command in ${channel} to pass play to the next player.`;
+                } else {
+                    privateString += ` Use the !draw command in ${channel} to draw a new card. Maybe you can play it!`;
+                }
+            } else {
+                privateString += `To play a card, enter this command in ${this.channel}: !play cardname [wildcolor] [shout]\n`;
+                privateString += `Parameters in [square brackets] are optional. Only include a wildcolor if you're playing a wild card, and only shout if you will have 1 card left in your hand after playing.`;
+                privateString += `Examples: !play blonde bunny, !play brown reverse, !play wild breed 4 white, !play black cat shout\n`;
+                privateString += `When playing your next to last card, don't forget to include "shout" at the end of the !play command. If you forget, you can use the !shout command after the fact, but make sure to do it before someone calls you out, or you will have to draw 2 cards! If the next player takes their turn before anyone calls you out, you're safe.`;
+                privateString += ` When playing a wild or wild breed 4 card, don't forget to include the color you want after the card name. If you don't want to play a card, you can use !draw to draw a card, or !pass to pass your turn if you've already drawn a card this turn.`;
+            }
             this.msgUser(privateString, player.getName());
             console.log(str);
             return str.substring(0, str.length - 1);
