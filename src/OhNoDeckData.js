@@ -34,6 +34,13 @@ NUMBER_RANKS.forEach((rank, index) => SCORE_MAP[rank] = index);
 ACTION_RANKS.forEach((rank) => SCORE_MAP[rank] = 20);
 WILD_RANKS.forEach((rank) => SCORE_MAP[rank] = 50);
 
+const ALL_CARD_NAMES = [];
+COLORS.forEach(color => {
+    NUMBER_RANKS.forEach((rank) => ALL_CARD_NAMES.push(`${color} ${rank}`));
+    ACTION_RANKS.forEach((rank) => ALL_CARD_NAMES.push(`${color} ${rank}`));
+})
+WILD_RANKS.forEach((rank) => ALL_CARD_NAMES.push(rank));
+
 module.exports = {
     NUMBER_RANKS,
     
@@ -50,5 +57,7 @@ module.exports = {
 
     COLORS,
 
-    SCORE_MAP
+    SCORE_MAP,
+
+    ALL_CARD_NAMES
 };

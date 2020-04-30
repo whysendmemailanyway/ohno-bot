@@ -4,9 +4,11 @@ const OhNoHelper = require('../src/OhNoHelper').default;
 class OhNo {
     constructor(fChatClient, channel) {
         this.channel = channel;
+        console.log('CHANNEL:');
+        console.log(this.channel);
         this.fChatClient = fChatClient;
-        this.helper = new OhNoHelper(this.fChatClient);
         this.game = new OhNoGame();
+        this.helper = new OhNoHelper(this.fChatClient, this.game, this.channel);
         this.defaultMessage = `I am broken... sorry!`;
 
         this.aliases = {
@@ -27,6 +29,8 @@ class OhNo {
             
             startg: this.startgame,
             start: this.startgame,
+
+            startr: this.startround,
            
             stopgame: this.endgame,
             stopg: this.endgame,
@@ -53,15 +57,49 @@ class OhNo {
         let s = [
             //'!addplayer: !addplayers, !addp.',
             '!configuregame: !confg.',
+            '!endgame: !stopgame, !stopg, !stop, !endg, !end.',
             '!joingame: !joing, !join',
             '!leavegame: !leaveg, !leave.',
             '!listplayers: !listp.',
             '!removeplayer: !removeplayers, !removep, !remp, !delp.',
             '!shortcuts: !shortc, !scuts, !sc.',
             '!startgame: !startg, !start.',
-            '!endgame: !stopgame, !stopg, !stop, !endg, !end.'
+            '!startround: !startr.'
         ]
         this.helper.msgRoom(s.join(' '), data.channel);
+    }
+
+    // TODO: timeouts. if a player does not respond within the timeout, botify them.
+    // Timeouts are only active during a round.
+
+    shout = (args, data) => {
+        if (this.helper.helpArgs(args)) {
+            this.helper.msgRoom(`The !shout command has two uses. If you played all but one card in your hand and forgot to shout when you played, you can use this command to shout. If someone else played all but one card in their hand and hasn't shouted yet, you can use this command (even if it is not your turn) before the next player takes their turn to force the player who forgot to shout to draw two cards. Permission: any player in the current game. Usage: !shout`, data.channel);
+            return;
+        }
+        let str = this.defaultMessage;
+        let name = data.character;
+        let player = this.game.findPlayerWithName(name);
+        if (player === null) {
+            str = `You can't shout, ${name}, you are not a player in the current game.`;
+        } else {
+            str = this.game.shout(player);
+        }
+        this.helper.msgRoom(str, data.channel);
+    }
+
+    play = (args, data) => {
+        if (this.helper.insufficientArgs(args)) {
+            this.helper.msgRoom(`The !play command is used to . Permission: any (on your turn only). Usage: !play cardName [shout] [wildColor]`, data.channel);
+            return;
+        }
+        let arr = args.split(', ');
+        let str = this.defaultMessage;
+        // TODO: PARSE THE INPUT... eek
+        // attempt to play selected card (with isShout and wildColor if necessary)
+        // if successful, output the play and promptCurrentPlayer();
+        // if unsuccessful, PM the current player so they can try again.
+        this.helper.msgRoom(str, data.channel);
     }
 
     draw = (args, data) => {
@@ -202,6 +240,25 @@ class OhNo {
     //     // unconfirm self (but stay in game)
     // }
 
+    startround = (args, data) => {
+        if (this.helper.helpArgs(args)) {
+            this.helper.msgRoom(`The !startround command begins a new round of OhNo with the current approved players. Permission: OP only. Usage: !startround`, data.channel);
+            return;
+        }
+        if (!this.helper.isUserChatOP(data)) return;
+        let str = this.defaultMessage;
+        if (this.game.isRoundInProgress) {
+            str = `The round is already in progress. Please finish the current round before starting a new one.`;
+        } else if (this.game.getApprovedPlayers().length < 2) {
+            let length = this.game.getApprovedPlayers().length;
+            str = `You need at least two approved players in the game before you can start the round. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
+        } else {
+            this.game.startRound();
+            str = `[b]A new round has begun![/b]\n` + this.helper.promptCurrentPlayer();
+        }
+        this.helper.msgRoom(str, data.channel);
+    }
+
     startgame = (args, data) => {
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !startgame command begins a new game of OhNo with the current players. Permission: OP only. Usage: !startgame`, data.channel);
@@ -216,10 +273,7 @@ class OhNo {
             str = `You need at least two approved players in the game before you can start it. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
         } else {
             this.game.startGame();
-            str = 'oh my a new game idk wat 2 do halp';
-            // TODO: start the game!!!
-            // * PM the player who's turn it is, let them know how their hand and how to enter their play
-            // * set str to show who dealt and which card was turned up; let players know who should have been PM'd
+            str = `[b]A new game has begun![/b]\n` + this.helper.promptCurrentPlayer();
         }
         this.helper.msgRoom(str, data.channel);
     }

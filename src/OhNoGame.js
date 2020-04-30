@@ -40,6 +40,13 @@ const makeWildCards = () => {
     return results;
 }
 
+const makeMatcher = () => {
+    let colors = DECKDATA.COLORS.join('|');
+    let ranks = [...DECKDATA.NUMBER_RANKS, ...DECKDATA.ACTION_RANKS].join('|');
+    let wildRanks = DECKDATA.WILD_RANKS.join('|');
+    return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:=${wildRanks}))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>SHOUT)*)`, `gi`);
+}
+
 module.exports.default = class OhNoGame {
     constructor() {
         this.deck;
@@ -57,6 +64,7 @@ module.exports.default = class OhNoGame {
         this.draw4LastTurn;
         this.results;
         this.hasDrawnThisTurn;
+        this.isRoundInProgress = false;
         this.config = {
             startingHandSize: 7,
             targetScore: 500,
@@ -145,7 +153,7 @@ module.exports.default = class OhNoGame {
             }
         }
         player.setAlias(alias);
-        if (alias) {
+        if (alias !== null) {
             console.log(`Gave ${player.name} new alias of ${player.getName()}.`);
         } else {
             console.log(`Removed alias from ${player.getName()}.`);
@@ -209,7 +217,7 @@ module.exports.default = class OhNoGame {
             this.hasDrawnThisTurn = true;
         } else {
             console.log(`${this.currentPlayer.getName()} passes their turn.`);
-            this.updatePlayerIndex;
+            this.updatePlayerIndex();
         }
     }
 
@@ -223,10 +231,12 @@ module.exports.default = class OhNoGame {
     }
 
     startRound() {
+        this.isRoundInProgress = true;
         this.playerIndex = this.dealerIndex;
         if (this.playerIndex >= this.players.length) this.playerIndex = 0;
         this.goingClockwise = true;
         this.currentDealer = this.players[this.dealerIndex];
+        this.matcher = makeMatcher();
         this.deck = new Deck([...makeNumberCards(), ...makeActionCards(), ...makeWildCards()]);
         this.deck.shuffle();
         this.discards = new Deck();
@@ -238,27 +248,20 @@ module.exports.default = class OhNoGame {
         this.playCard(this.drawOne());
     }
 
+    canPlayerPlay(player=this.currentPlayer) {
+        for (let i = 0; i < player.hand.length; i++) {
+            if (this.isCardPlayable(player.hand[i])) return true;
+        }
+        return false;
+    }
+
     startTurn() {
+        this.players.forEach(player => player.isInShoutDanger = false);
+        this.results = '';
         console.log();
         this.currentPlayer = this.players[this.playerIndex];
         console.log(`It is ${this.currentPlayer.getName()}'s turn.`);
         this.hasDrawnThisTurn = false;
-        // for (let i = 0; i < this.currentPlayer.hand.length; i++) {
-        //     if (this.isCardPlayable(this.currentPlayer.hand[i])) return;
-        // }
-        // console.log(`${this.currentPlayer.getName()} can't play, and must draw a card!`);
-        // let card = this.drawOne();
-        // if (this.isCardPlayable(card)) {
-        //     // should we return even if the card is not playable?
-        //     // that way a player could keep a playable card, and no one would know,
-        //     // BUT it could really slow down the game for the 90% of times when a
-        //     //  player would just pass anyway. Especially if they forget to pass and
-        //     //  everyone has to wait 10 minutes for their turn to auto-elapse...
-        //     // If we go that route, the `can't play and must draw` message above
-        //     //  would also not be displayed until the player chose to pass.
-        //     return;
-        // }
-        // this.updatePlayerIndex();
     }
 
     isCardPlayable(newCard, oldCard=null) {
@@ -289,7 +292,7 @@ module.exports.default = class OhNoGame {
     }
 
     handleDraw4() {
-        console.log(`${UTILS.titleCase(DECKDATA.RANK_WILD_DRAW_4)} was played on ${this.currentPlayer.getName()}! Waiting for them to accept or challenge...`);
+        return `${UTILS.titleCase(DECKDATA.RANK_WILD_DRAW_4)} was played on ${this.currentPlayer.getName()}! Waiting for them to accept or challenge...`;
     }
 
     acceptDraw4() {
@@ -337,30 +340,38 @@ module.exports.default = class OhNoGame {
         }
     }
 
-    callOutPlayer(nameOrIndex) {
-        let player = this.findPlayerWithName(nameOrIndex);
-        if (!player) player = this.players[nameOrIndex];
-        if (!player) throw `Couldn't find player with name or index ${nameOrIndex}...`;
-        if (player.hand.length !== 1) {
-            console.log(`${player.getName()}'s name was called, but they have more than one card in their hand.`);
-        } else if (player.hasShouted) {
-            console.log(`${player.getName()}'s name was called, but they already yelled.`);
-        } else {
-            console.log(`${player.getName()}'s name was called before they yelled, they must draw two cards!`);
-            player.addToHand(this.drawX(2));
-        }
-    }
+    // callOutPlayer(nameOrIndex) {
+    //     let player = this.findPlayerWithName(nameOrIndex);
+    //     if (!player) player = this.players[nameOrIndex];
+    //     if (!player) throw `Couldn't find player with name or index ${nameOrIndex}...`;
+    //     if (player.hand.length !== 1) {
+    //         console.log(`${player.getName()}'s name was called, but they have more than one card in their hand.`);
+    //     } else if (player.hasShouted) {
+    //         console.log(`${player.getName()}'s name was called, but they already yelled.`);
+    //     } else {
+    //         console.log(`${player.getName()}'s name was called before they yelled, they must draw two cards!`);
+    //         player.addToHand(this.drawX(2));
+    //     }
+    // }
 
+    // TODO: implement player shouting via chat
+    // TODO: implement bot shouting?
     shout(player) {
-        if (player.hand.length === 1) {
-            if (player.hasShouted) {
-                console.log(`${player.getName()} has already called OhNo, no need to call it again...`);
-            } else {
-                console.log(`${player.getName()} has shouted "OH NO!"`);
-                player.hasShouted = true;
+        let playerInDanger = null;
+        for (let i = 0; i < this.players.length; i++) {
+            if (this.players[i].isInShoutDanger) {
+                playerInDanger = this.players[i];
+                break;
             }
+        }
+        if (playerInDanger === null) return `No players are in danger; players can only be called out when they have 1 card left in their hand after their turn and the next player has not yet taken a turn.`;
+        if (player.isInShoutDanger) {
+            player.hasShouted = true;
+            player.isInShoutDanger = false;
+            return `${player.getName()} has shouted "OH NO!"`;
         } else {
-            console.log(`${player.getName()} tries to call OhNo, but still has ${player.hand.length} cards left. OhNo can only be called with one card in hand.`);
+            playerInDanger.addToHand(this.drawX(2));
+            return `${player.getName()} called out ${playerInDanger.getName()} and made them draw two cards!`;
         }
     }
 
@@ -407,22 +418,32 @@ module.exports.default = class OhNoGame {
         return highestCard;
     }
 
+    setResultsWithArray(messages) {
+        this.results = messages.join(' ');
+        console.log(this.results);
+    }
+
     playCard(card, player, newWildColor, withShout = false) {
+        let messages = [];
         if (player) {
             if (!this.isCardPlayable(card)) {
-                console.log(`Hey! You can't play ${card.getName()} on ${this.discards.top().getName()}...`);
+                messages.push(`Hey! You can't play ${card.getName()} on ${this.discards.top().getName()}...`);
+                this.setResultsWithArray(messages);
                 return false;
             }
             player.removeFromHand(player.hand.indexOf(card));
-            console.log(`${player.getName()} played ${card.getName()}${card.isWild() ? ' and set the new color to ' + UTILS.titleCase(newWildColor) : ''}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
+            messages.push(`${player.getName()} played ${card.getName()}${card.isWild() ? ' and set the new color to ' + UTILS.titleCase(newWildColor) : ''}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
             if (player.hand.length === 0) {
-                console.log(`${player.getName()} played their last card and won the round!`);
-                this.endRound();
+                messages.push(`${player.getName()} played their last card and won the round!`);
+                messages.push(...this.endRound());
+                this.setResultsWithArray(messages);
                 return true;
+            } else if (player.hand.length === 1) {
+                player.isInShoutDanger = true;
             }
-            if (withShout) this.shout(player);
+            if (withShout) messages.push(this.shout(player));
         } else {
-            console.log(`${this.currentDealer.getName()} dealt ${card.getName()} as the starting card.`);
+            messages.push(`${this.currentDealer.getName()} dealt ${card.getName()} as the starting card.`);
         }
         this.discards.addToTop(card);
         if (card.rank === DECKDATA.RANK_REVERSE) {
@@ -433,7 +454,7 @@ module.exports.default = class OhNoGame {
                 newDirection = 'left';
                 oldDirection = 'right';
             }
-            console.log(`${UTILS.titleCase(DECKDATA.RANK_REVERSE)}! Play now moves to the ${newDirection} instead of the ${oldDirection}.`);
+            messages.push(`${UTILS.titleCase(DECKDATA.RANK_REVERSE)}! Play now moves to the ${newDirection} instead of the ${oldDirection}.`);
             if (!player || this.players.length === 2) {
                 this.playerIndex += 1; // offset to account for dealer being able to reverse to self AND for 2 player games
             }
@@ -443,18 +464,20 @@ module.exports.default = class OhNoGame {
         if (card.rank === DECKDATA.RANK_WILD_DRAW_4) {
             this.wildColor = newWildColor;
             this.draw4LastTurn = true;
-            this.handleDraw4();
+            this.messagse.push(this.handleDraw4());
+            this.setResultsWithArray(messages);
             return true;
         } else {
             if (card.rank === DECKDATA.RANK_SKIP) {
-                console.log(`${UTILS.titleCase(DECKDATA.RANK_SKIP)}! ${this.currentPlayer.getName()} misses their turn.`);
+                messages.push(`${UTILS.titleCase(DECKDATA.RANK_SKIP)}! ${this.currentPlayer.getName()} misses their turn.`);
                 skip = true;
             } else if (card.rank === DECKDATA.RANK_DRAW_2) {
                 this.currentPlayer.addToHand(this.drawX(2));
-                console.log(`Aw, ${this.currentPlayer.getName()} had to draw 2 and miss their turn.`);
+                messages.push(`Aw, ${this.currentPlayer.getName()} had to draw 2 and miss their turn.`);
                 skip = true;
             }
             this.endTurn(skip);
+            this.setResultsWithArray(messages);
             return true;
         }
     }
@@ -475,21 +498,23 @@ module.exports.default = class OhNoGame {
     }
 
     endRound() {
+        this.isRoundInProgress = false;
         let cards = [];
+        let messages = [];
         this.players.forEach(player => {
             if (player === this.currentPlayer) return;
             cards.push(...player.hand);
         });
         let score = new OhNoScore(cards);
         this.currentPlayer.score.addScore(score);
-        console.log(`${this.currentPlayer.getName()} scored ${score.getValue()} points this round: ${score.toString()}`);
+        messages.push(`${this.currentPlayer.getName()} scored ${score.getValue()} points this round: ${score.toString()}`);
         let totalScore = this.currentPlayer.score.getValue();
-        console.log(`This brings their total score to ${totalScore} points!`);
+        messages.push(`This brings their total score to ${totalScore} points!`);
         if (this.checkForVictory()) return;
         this.dealerIndex += 1;
         if (this.dealerIndex >= this.players.length) this.dealerIndex = 0;
-        console.log(`It is now ${this.players[this.dealerIndex].getName()}'s turn to deal.`);
-        this.startRound();
+        messages.push(`It is now ${this.players[this.dealerIndex].getName()}'s turn to deal.`);
+        return messages;
     }
 
     checkForVictory() {

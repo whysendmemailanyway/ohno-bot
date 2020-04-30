@@ -12,6 +12,52 @@ let options = {
     cname: process.env.CLIENT_NAME,
     cversion: process.env.CLIENT_VERSION
 };
+
+const DECKDATA = require('./src/OhNoDeckData');
+//console.log(DECKDATA.ALL_CARD_NAMES);
+const makeMatcher = () => {
+    let colors = DECKDATA.COLORS.join('|');
+    let ranks = [...DECKDATA.NUMBER_RANKS, ...DECKDATA.ACTION_RANKS].join('|');
+    let wildRanks = DECKDATA.WILD_RANKS.join('|');
+    return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:=${wildRanks}))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>SHOUT)*)`, `gi`);
+}
+let matcher = makeMatcher();
+let commands = [
+    // true:
+    'blonde bunny shout',
+    'black reverse',
+    'wild breed 4 blonde',
+    // false:
+    'the FIRST failure',
+    'blonde',
+    'reverse',
+    'wild breed 4',
+    'shout',
+]
+commands.forEach(command => {
+    console.log();
+    console.log(command);
+    //let match = command.match(matcher);
+    let match = matcher.exec(command);
+    if (!match) {
+        console.log(match);
+        return;
+    }
+    for (let group in match.groups) {
+        console.log(`${group}: ${match.groups[group]}`);
+    }
+    // let matches = [...command.matchAll(matcher)];
+    // if (matches) {
+    //     console.log(matches[0]);
+    //     console.log(matches[1]);
+    //     console.log(matches[2]);
+    //     console.log(matches[3]);
+    //     console.log(matches['colorcard']);
+    // } else {
+    //     console.log(matches);
+    // }
+})
+return;
 let myFchatBot = new FChatLib(options);
 
 myFchatBot.connect();

@@ -5,6 +5,7 @@ module.exports.default = class OhNoPlayer {
         this.name = name;
         this.hand = [];
         this.hasShouted = false;
+        this.isInShoutDanger = false;
         this.score = {};
         this.isBot = false;
         this.isApproved = false;
@@ -26,7 +27,10 @@ module.exports.default = class OhNoPlayer {
         } else {
             arr.push(cards);
         }
-        if (arr.length > 0) this.hasShouted = false;
+        if (arr.length > 0) {
+            this.hasShouted = false;
+            this.isInShoutDanger = false;
+        }
         this.hand.push(...arr);
         this.hand.sort((a, b) => {
             if (a.color && b.color) {
