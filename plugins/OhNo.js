@@ -113,6 +113,7 @@ class OhNo {
             str = `You can't challenge, ${player.getName()}, it is not your turn.`;
         } else {
             this.game.challengeDraw4();
+            this.game.startTurn();
             str = this.helper.promptCurrentPlayer();
         }
         this.helper.msgRoom(str, data.channel);
@@ -166,8 +167,12 @@ class OhNo {
                 } else {
                     let succeeded = this.game.playCard(play.card, player, play.wildColor, play.withShout);
                     if (succeeded) {
-                        this.game.startTurn();
-                        str = this.helper.promptCurrentPlayer();
+                        if (this.game.isRoundInProgress) {
+                            this.game.startTurn();
+                            str = this.helper.promptCurrentPlayer();
+                        } else {
+                            str = `${this.game.results}\n\nPlease use the !startround command when all players are ready for the next round.`;
+                        }
                     } else {
                         str = this.game.results;
                     }

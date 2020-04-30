@@ -319,8 +319,6 @@ class FChatLib {
     }
     joinNewChannel(args) {
         let channel = args.name;
-        console.log('hi mom');
-        console.log(args);
         if (this.channels.get(channel) == null) {
             this.channels.set(channel, { pluginsList: [], channelTitle: args.title, channelName: channel });
         }
@@ -408,10 +406,7 @@ class FChatLib {
         }
     }
     variableChangeHandler(args) {
-        switch (args.variable) {
-            default:
-                break;
-        }
+        return;
     }
     getTicket() {
         return __awaiter(this, void 0, void 0, function* () {

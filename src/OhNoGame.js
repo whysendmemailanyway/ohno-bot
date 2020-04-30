@@ -274,7 +274,6 @@ module.exports.default = class OhNoGame {
     }
 
     startTurn() {
-        this.players.forEach(player => player.isInShoutDanger = false);
         //this.results = '';
         console.log();
         this.currentPlayer = this.players[this.playerIndex];
@@ -429,6 +428,7 @@ module.exports.default = class OhNoGame {
     }
 
     playCard(card, player, newWildColor, withShout = false) {
+        this.players.forEach(player => player.isInShoutDanger = false);
         let messages = [];
         if (player) {
             if (!this.isCardPlayable(card)) {

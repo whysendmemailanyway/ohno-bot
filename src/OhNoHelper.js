@@ -1,4 +1,4 @@
-const DECKDATA = require('../src/OhNoDeckData').default;
+const DECKDATA = require('./OhNoDeckData');
 
 class OhNoHelper {
     constructor (fChatClient, game, channel) {
@@ -85,15 +85,18 @@ class OhNoHelper {
         }
         let player = this.game.currentPlayer;
         if (!player.isBot) {
-            let channel = this.fChatClient.channels.get(this.channel)[0].channelTitle;
+            let top = this.game.discards.top();
+            if (this.game.draw4LastTurn) {
+                return `${str.substring(0, str.length - 1)}`;
+            }
+            let channel = this.fChatClient.channels.get(this.channel).channelTitle;
             let name = player.getName();
             str = `${str}It is ${name}'s turn to play. PM'ing them with their hand... `;
             let privateString = `[b]Current game: ${channel}[/b]\n`;
-            let top = this.game.discards.top();
             privateString += `The top discard is [b]${top.getName()}[/b]${top.isWild() ? `, the wild color is [b]${this.game.wildColor}[/b]` : ``}. Your hand:\n`;
             privateString += `    ${player.handToString()}\n\n`;
             if (this.game.canPlayerPlay() === false) {
-                privateString += `\n\nYou currently have no playable cards.`;
+                privateString += `You currently have no playable cards.`;
                 if (this.game.hasDrawnThisTurn) {
                     privateString += ` Use the !pass command in ${channel} to pass play to the next player.`;
                 } else {

@@ -1,4 +1,5 @@
 let DECKDATA = require('./OhNoDeckData');
+let OhNoScore = require('./OhNoScore').default;
 
 module.exports.default = class OhNoPlayer {
     constructor(name) {
@@ -17,7 +18,7 @@ module.exports.default = class OhNoPlayer {
         this.hand = [];
         this.hasShouted = false;
         this.isInShoutDanger = false;
-        this.score = {};
+        this.score = new OhNoScore();
     }
 
     getName() {
