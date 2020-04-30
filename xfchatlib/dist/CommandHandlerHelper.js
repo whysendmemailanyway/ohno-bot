@@ -62,7 +62,8 @@ class CommandHandlerHelper {
         }
     }
     internalUpdatePluginsFile() {
-        this.commandHandler.fChatLibInstance.channels.set(this.commandHandler.channelName, this.commandHandler.pluginsLoaded);
+        let channelTitle = this.commandHandler.fChatLibInstance.channels.get(this.commandHandler.channelName).channelTitle;
+        this.commandHandler.fChatLibInstance.channels.set(this.commandHandler.channelName, { channelName: this.commandHandler.channelName, channelTitle, pluginsList: this.commandHandler.pluginsLoaded });
         this.commandHandler.fChatLibInstance.updateRoomsConfig();
     }
     internalLoadPluginOnStart(pluginsArray) {

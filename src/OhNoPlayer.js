@@ -3,17 +3,25 @@ let DECKDATA = require('./OhNoDeckData');
 module.exports.default = class OhNoPlayer {
     constructor(name) {
         this.name = name;
+        this.hand;
+        this.hasShouted;
+        this.isInShoutDanger;
+        this.score;
+        this.isBot = false;
+        this.isApproved = false;
+        this.alias;
+        this.reset();
+    }
+
+    reset() {
         this.hand = [];
         this.hasShouted = false;
         this.isInShoutDanger = false;
         this.score = {};
-        this.isBot = false;
-        this.isApproved = false;
-        this.alias = name;
     }
 
     getName() {
-        return this.alias + (this.isBot ? ' (bot)' : '');
+        return `${this.alias ? this.alias : this.name}${this.isBot ? ' (bot)' : ''}`;
     }
 
     setAlias(alias) {

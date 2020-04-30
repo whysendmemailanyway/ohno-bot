@@ -42,9 +42,11 @@ class FChatLib {
         this.usersInChannel = [];
         this.chatOPsInChannel = [];
         this.commandHandlers = [];
+        //channels:Map<string, Array<IPlugin>> = new Map<string, Array<IPlugin>>();
         this.channels = new Map();
-        this.floodLimit = 2.0;
-        this.lastTimeCommandReceived = Number.MAX_VALUE;
+        this.floodLimit = 1.0;
+        // lastTimeCommandReceived:number = Number.MAX_VALUE;
+        this.lastTimeCommandReceived = 0;
         this.commandsInQueue = 0;
         if (configuration == null) {
             console.log('No configuration passed, cannot start.');
@@ -64,7 +66,7 @@ class FChatLib {
         }
         catch (err) { }
         if (this.config.room !== undefined && this.channels.get(this.config.room) == null) {
-            this.channels.set(this.config.room, []);
+            this.channels.set(this.config.room, { channelTitle: 'defaultTitle', pluginsList: [], channelName: 'defaultName' });
             this.updateRoomsConfig();
         }
     }
@@ -265,13 +267,8 @@ class FChatLib {
     sendData(messageType, content) {
         return __awaiter(this, void 0, void 0, function* () {
             this.commandsInQueue++;
-            let currentTime = parseInt(process.uptime().toString(), 10);
-            if ((currentTime - this.lastTimeCommandReceived) < this.floodLimit) {
-                let timeElapsedSinceLastCommand = currentTime - this.lastTimeCommandReceived;
-                let timeToWait = (this.commandsInQueue * this.floodLimit) - timeElapsedSinceLastCommand;
-                yield this.timeout(timeToWait * 1000);
-            }
-            this.lastTimeCommandReceived = parseInt(process.uptime().toString(), 10);
+            let timeToWait = (this.commandsInQueue * this.floodLimit);
+            yield this.timeout(timeToWait * 1000);
             this.commandsInQueue--;
             this.sendWS(messageType, content);
         });
@@ -288,7 +285,7 @@ class FChatLib {
     connect() {
         return __awaiter(this, void 0, void 0, function* () {
             this.ws = null;
-            this.setFloodLimit(2);
+            this.setFloodLimit(this.floodLimit);
             this.generateCommandHandlers();
             this.addMessageListener(this.commandListener); //basic commands + plugins loader, one instance for one bot
             this.addConnectionListener(this.joinChannelOnConnect);
@@ -310,7 +307,7 @@ class FChatLib {
         });
     }
     joinChannelsWhereInvited(args) {
-        this.joinNewChannel(args.name);
+        this.joinNewChannel(args);
     }
     joinChannelOnConnect(args) {
         for (let room of this.channels.keys()) {
@@ -320,9 +317,12 @@ class FChatLib {
     setStatus(status, message) {
         this.sendWS('STA', { status: status, statusmsg: message });
     }
-    joinNewChannel(channel) {
+    joinNewChannel(args) {
+        let channel = args.name;
+        console.log('hi mom');
+        console.log(args);
         if (this.channels.get(channel) == null) {
-            this.channels.set(channel, []);
+            this.channels.set(channel, { pluginsList: [], channelTitle: args.title, channelName: channel });
         }
         this.sendWS('JCH', { channel: channel });
         this.commandHandlers[channel] = new CommandHandler_1.default(this, channel);
@@ -409,9 +409,6 @@ class FChatLib {
     }
     variableChangeHandler(args) {
         switch (args.variable) {
-            case "msg_flood":
-                this.floodLimit = args.value;
-                break;
             default:
                 break;
         }
@@ -432,8 +429,11 @@ class FChatLib {
         });
     }
     sendWS(command, object) {
-        if (this.ws.readyState)
+        if (this.ws.readyState) {
             this.ws.send(command + ' ' + JSON.stringify(object));
+            return true;
+        }
+        return false;
     }
     sendMessage(message, channel) {
         let json = {};
@@ -457,10 +457,10 @@ class FChatLib {
         return [].concat(...this.usersInChannel);
     }
     getChatOPList(channel) {
-        return (this.chatOPsInChannel[channel] != null ? [] : this.chatOPsInChannel[channel]);
+        return (this.chatOPsInChannel[channel] === null ? [] : this.chatOPsInChannel[channel]);
     }
     isUserChatOP(username, channel) {
-        return (this.getChatOPList(channel).indexOf(username) != -1 || username == this.config.master);
+        return (this.getChatOPList(channel).indexOf(username) !== -1 || username == this.config.master);
     }
     isUserMaster(username) {
         return (username == this.config.master);
@@ -536,6 +536,9 @@ class FChatLib {
                     }
                 }
                 catch (e) {
+                }
+                if (argument.channel !== undefined && argument.channel.substring(0, 3).toLowerCase() === `adh`) {
+                    argument.channel = argument.channel.substring(0, 3).toUpperCase() + argument.channel.substring(3).toLowerCase();
                 }
                 switch (command) {
                     case "CON": //CON { "count": int }

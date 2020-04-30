@@ -44,7 +44,7 @@ const makeMatcher = () => {
     let colors = DECKDATA.COLORS.join('|');
     let ranks = [...DECKDATA.NUMBER_RANKS, ...DECKDATA.ACTION_RANKS].join('|');
     let wildRanks = DECKDATA.WILD_RANKS.join('|');
-    return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:=${wildRanks}))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>SHOUT)*)`, `gi`);
+    return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:WILD(?: BREED 4)*))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>SHOUT)*)`, `gi`);
 }
 
 module.exports.default = class OhNoGame {
@@ -76,12 +76,15 @@ module.exports.default = class OhNoGame {
         let match = this.matcher.exec(args);
         if (!match) {
             console.log(match);
+            this.matcher.lastIndex = 0;
             return match;
         }
         let response = {};
         for (let group in match.groups) {
             response[group] = match.groups[group];
         }
+        console.log(response);
+        this.matcher.lastIndex = 0;
         return response;
     }
 
@@ -224,7 +227,7 @@ module.exports.default = class OhNoGame {
     }
 
     pass() {
-        this.results = '';
+        this.results = ``;
         if (!this.hasDrawnThisTurn) {
             this.currentPlayer.addToHand(this.drawOne());
             console.log(`${this.currentPlayer.getName()} drew a card.`);
@@ -237,14 +240,15 @@ module.exports.default = class OhNoGame {
 
     startGame() {
         console.log(`The game is afoot! Have fun. :-)`);
-        this.results = '';
+        this.results = ``;
         this.players = this.getApprovedPlayers();
-        this.players.forEach(player => player.score = new OhNoScore());
+        this.players.forEach(player => player.reset());
         this.isInProgress = true;
         this.startRound();
     }
 
     startRound() {
+        this.results = ``;
         this.isRoundInProgress = true;
         this.playerIndex = this.dealerIndex;
         if (this.playerIndex >= this.players.length) this.playerIndex = 0;
@@ -271,7 +275,7 @@ module.exports.default = class OhNoGame {
 
     startTurn() {
         this.players.forEach(player => player.isInShoutDanger = false);
-        this.results = '';
+        //this.results = '';
         console.log();
         this.currentPlayer = this.players[this.playerIndex];
         console.log(`It is ${this.currentPlayer.getName()}'s turn.`);
@@ -281,7 +285,7 @@ module.exports.default = class OhNoGame {
     isCardPlayable(newCard, oldCard=null) {
         if (!oldCard) oldCard = this.discards.top();
         if (newCard.isWild()) return true;
-        if (oldCard.isWild()) return newCard.color === this.wildColor;
+        if (oldCard.isWild()) return this.wildColor === null || newCard.color.toLowerCase() === this.wildColor.toLowerCase();
         if (newCard.color === oldCard.color) return true;
         return newCard.rank === oldCard.rank;
     }
@@ -356,20 +360,6 @@ module.exports.default = class OhNoGame {
         return this.setResultsWithArray(messages);
     }
 
-    // callOutPlayer(nameOrIndex) {
-    //     let player = this.findPlayerWithName(nameOrIndex);
-    //     if (!player) player = this.players[nameOrIndex];
-    //     if (!player) throw `Couldn't find player with name or index ${nameOrIndex}...`;
-    //     if (player.hand.length !== 1) {
-    //         console.log(`${player.getName()}'s name was called, but they have more than one card in their hand.`);
-    //     } else if (player.hasShouted) {
-    //         console.log(`${player.getName()}'s name was called, but they already yelled.`);
-    //     } else {
-    //         console.log(`${player.getName()}'s name was called before they yelled, they must draw two cards!`);
-    //         player.addToHand(this.drawX(2));
-    //     }
-    // }
-
     // TODO: implement bot shouting?
     shout(player) {
         let playerInDanger = null;
@@ -434,7 +424,7 @@ module.exports.default = class OhNoGame {
     }
 
     setResultsWithArray(messages) {
-        this.results = messages.join(' ');
+        this.results = messages.join(` `);
         console.log(this.results);
     }
 
@@ -446,8 +436,14 @@ module.exports.default = class OhNoGame {
                 this.setResultsWithArray(messages);
                 return false;
             }
+            if (card.isWild() && newWildColor === null) {
+                messages.push(`${player.getName()} forgot to specify the wild color. Please review your !play command syntax and try again!`);
+                this.setResultsWithArray(messages);
+                return false;
+            }
             player.removeFromHand(player.hand.indexOf(card));
-            messages.push(`${player.getName()} played ${card.getName()}${card.isWild() ? ' and set the new color to ' + UTILS.titleCase(newWildColor) : ''}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
+            messages.push(`${player.getName()} played [b]${card.getName()}[/b]${card.isWild() ? ' and set the new color to [b]' + (UTILS.titleCase(newWildColor) + '[/b]') : ''}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
+            if (card.isWild() && newWildColor !== null) this.wildColor = UTILS.titleCase(newWildColor);
             if (player.hand.length === 0) {
                 messages.push(`${player.getName()} played their last card and won the round!`);
                 messages.push(...this.endRound());
@@ -458,7 +454,14 @@ module.exports.default = class OhNoGame {
             }
             if (withShout) messages.push(this.shout(player));
         } else {
-            messages.push(`${this.currentDealer.getName()} dealt ${card.getName()} as the starting card.`);
+            messages.push(`${this.currentDealer.getName()} dealt [b]${card.getName()}[/b] as the starting card.`);
+            while (card.rank === DECKDATA.RANK_WILD_DRAW_4) {
+                messages.push(`Whoops, can't start the game with ${DECKDATA.RANK_WILD_DRAW_4}! Reshuffling the deck and dealing a new starting card...`);
+                this.deck.addToTop(card);
+                this.deck.shuffle();
+                card = this.drawOne();
+                messages.push(`${this.currentDealer.getName()} dealt [b]${card.getName()}[/b] as the starting card.`);
+            }
         }
         this.discards.addToTop(card);
         if (card.rank === DECKDATA.RANK_REVERSE) {
@@ -477,7 +480,7 @@ module.exports.default = class OhNoGame {
         this.updatePlayerIndex();
         let skip = false;
         if (card.rank === DECKDATA.RANK_WILD_DRAW_4) {
-            this.wildColor = newWildColor;
+            this.wildColor = UTILS.titleCase(newWildColor);
             this.draw4LastTurn = true;
             messages.push(this.handleDraw4());
             this.setResultsWithArray(messages);
@@ -543,10 +546,10 @@ module.exports.default = class OhNoGame {
     }
 
     endPrematurely() {
-        let highestScore = players.reduce((highest, b) => {
+        let highestScore = this.players.reduce((highest, b) => {
             if (b.score.getValue() > highest) return b;
             return highest;
-        }, players[0].score.getValue());
+        }, this.players[0].score.getValue());
         this.endGame(this.players.filter(player => player.score.getValue() >= highestScore));
     }
 

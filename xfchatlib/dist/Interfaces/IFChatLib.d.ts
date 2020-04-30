@@ -1,4 +1,3 @@
-import { IPlugin } from "./IPlugin";
 import { IConfig } from "./IConfig";
 export interface IFChatLib {
     addConnectionListener(fn: Function): void;
@@ -62,7 +61,7 @@ export interface IFChatLib {
     usersInChannel: any;
     chatOPsInChannel: any;
     commandHandlers: any;
-    channels: Map<string, Array<IPlugin>>;
+    channels: Map<string, Object>;
     ws: any;
     pingInterval: NodeJS.Timer;
     floodLimit: number;

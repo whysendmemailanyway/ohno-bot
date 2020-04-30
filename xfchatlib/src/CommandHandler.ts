@@ -16,7 +16,7 @@ export default class CommandHandler{
         this.commandHandlerHelper = new CommandHandlerHelper(this);
 
         if(this.fChatLibInstance.channels.get(channel) != null && this.fChatLibInstance.channels.get(channel) != null){
-            this.pluginsLoaded = this.fChatLibInstance.channels.get(channel);
+            this.pluginsLoaded = this.fChatLibInstance.channels.get(channel).pluginsList;
             if(this.pluginsLoaded.length > 0){
                 this.commandHandlerHelper.internalLoadPluginOnStart(this.pluginsLoaded);
             }
@@ -232,7 +232,8 @@ export default class CommandHandler{
 
     flushpluginslist(args, data) {
         if(this.fChatLibInstance.isUserChatOP(data.character, data.channel)){
-            this.fChatLibInstance.channels.set(data.channel, []);
+            let channelTitle = this.fChatLibInstance.channels.get(data.channel).channelTitle;
+            this.fChatLibInstance.channels.set(data.channel, {channelName: data.channel, channelTitle, pluginsList: []});
             this.fChatLibInstance.sendMessage("Removed all plugins, the bot will restart.", data.channel);
             this.fChatLibInstance.softRestart(data.channel);
         }

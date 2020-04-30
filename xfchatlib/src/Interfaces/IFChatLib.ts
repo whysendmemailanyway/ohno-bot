@@ -68,7 +68,8 @@ export interface IFChatLib {
     chatOPsInChannel:any;
     commandHandlers:any;
 
-    channels:Map<string, Array<IPlugin>>;
+    //channels:Map<string, Array<IPlugin>>;
+    channels:Map<string, Object>;
 
     ws:any;
 

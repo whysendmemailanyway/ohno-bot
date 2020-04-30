@@ -13,51 +13,6 @@ let options = {
     cversion: process.env.CLIENT_VERSION
 };
 
-const DECKDATA = require('./src/OhNoDeckData');
-//console.log(DECKDATA.ALL_CARD_NAMES);
-const makeMatcher = () => {
-    let colors = DECKDATA.COLORS.join('|');
-    let ranks = [...DECKDATA.NUMBER_RANKS, ...DECKDATA.ACTION_RANKS].join('|');
-    let wildRanks = DECKDATA.WILD_RANKS.join('|');
-    return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:=${wildRanks}))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>SHOUT)*)`, `gi`);
-}
-let matcher = makeMatcher();
-let commands = [
-    // true:
-    'blonde bunny shout',
-    'black reverse',
-    'wild breed 4 blonde',
-    // false:
-    'the FIRST failure',
-    'blonde',
-    'reverse',
-    'wild breed 4',
-    'shout',
-]
-commands.forEach(command => {
-    console.log();
-    console.log(command);
-    //let match = command.match(matcher);
-    let match = matcher.exec(command);
-    if (!match) {
-        console.log(match);
-        return;
-    }
-    for (let group in match.groups) {
-        console.log(`${group}: ${match.groups[group]}`);
-    }
-    // let matches = [...command.matchAll(matcher)];
-    // if (matches) {
-    //     console.log(matches[0]);
-    //     console.log(matches[1]);
-    //     console.log(matches[2]);
-    //     console.log(matches[3]);
-    //     console.log(matches['colorcard']);
-    // } else {
-    //     console.log(matches);
-    // }
-})
-return;
 let myFchatBot = new FChatLib(options);
 
 myFchatBot.connect();
@@ -67,7 +22,7 @@ myFchatBot.addInviteListener((data) => {
     // { name: 'ADH-70c727f76bf77214cd76', sender: 'Tom_Kat', title: 'test2' }
     if (data.sender === myFchatBot.config.master && data.name.substring(0, 4).toLowerCase() === 'adh-') {
         console.log(`Joining ${data.title}...`);
-        myFchatBot.joinNewChannel(data.name);
+        myFchatBot.joinNewChannel(data);
         myFchatBot.commandHandlers[data.name].loadplugin('OhNo', {character: myFchatBot.config.master, channel: data.name});
         // setTimeout(() => {
         //     myFchatBot.commandHandlers[data.name].loadplugin('OhNo', {character: myFchatBot.config.master, channel: data.name});
@@ -82,6 +37,8 @@ myFchatBot.addPrivateMessageListener((data) => {
     console.log(data.message);
     myFchatBot.sendPrivMessage(`Hey friend! I don't currently support private messages, please use my commands in a channel where I am present. Maybe someday I'll be more robust. Thanks!`, data.character);
 });
+
+// myFchatBot.addMessageListener(data => console.log(data));
 
 // let names = ['Oney', 'Twoey', 'Threey', 'Fourey', 'Fivey', 'Sixy', 'Seveny', 'Eighty', 'Niney', 'Tenny'];
 // const numOfPlayers = 4;

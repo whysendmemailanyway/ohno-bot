@@ -1,7 +1,7 @@
-import { IPlugin } from "./Interfaces/IPlugin";
 import { IFChatLib } from "./Interfaces/IFChatLib";
 import { IConfig } from "./Interfaces/IConfig";
 import { IMsgEvent } from "./Interfaces/IMsgEvent";
+import { IChannel } from "./Interfaces/IChannel";
 export default class FChatLib implements IFChatLib {
     addConnectionListener(fn: Function): void;
     removeConnectionListener(fn: any): void;
@@ -64,7 +64,7 @@ export default class FChatLib implements IFChatLib {
     usersInChannel: string[][];
     chatOPsInChannel: string[][];
     commandHandlers: any[];
-    channels: Map<string, Array<IPlugin>>;
+    channels: Map<string, IChannel>;
     ws: any;
     pingInterval: NodeJS.Timer;
     floodLimit: number;
@@ -79,7 +79,7 @@ export default class FChatLib implements IFChatLib {
     joinChannelsWhereInvited(args: any): void;
     joinChannelOnConnect(args: any): void;
     setStatus(status: string, message: string): void;
-    joinNewChannel(channel: string): void;
+    joinNewChannel(args: any): void;
     commandListener(args: IMsgEvent): void;
     throwError(args: any, error: any, chan: any): void;
     addUsersToList(args: any): void;
@@ -91,7 +91,7 @@ export default class FChatLib implements IFChatLib {
     removeChatOPFromList(args: any): void;
     variableChangeHandler(args: any): void;
     getTicket(): Promise<object>;
-    sendWS(command: any, object: any): void;
+    sendWS(command: any, object: any): boolean;
     sendMessage(message: any, channel: any): void;
     sendPrivMessage(message: any, character: any): void;
     getUserList(channel: any): string[];

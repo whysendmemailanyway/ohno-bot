@@ -8,7 +8,7 @@ class CommandHandler {
         this.fChatLibInstance = parent;
         this.commandHandlerHelper = new CommandHandlerHelper_1.CommandHandlerHelper(this);
         if (this.fChatLibInstance.channels.get(channel) != null && this.fChatLibInstance.channels.get(channel) != null) {
-            this.pluginsLoaded = this.fChatLibInstance.channels.get(channel);
+            this.pluginsLoaded = this.fChatLibInstance.channels.get(channel).pluginsList;
             if (this.pluginsLoaded.length > 0) {
                 this.commandHandlerHelper.internalLoadPluginOnStart(this.pluginsLoaded);
             }
@@ -17,10 +17,10 @@ class CommandHandler {
     processCommand(data) {
         if (data && data.message && data.message.length > 2 && data.message[0] == '!') {
             let opts = {
-                command: String(data.message.split(' ')[0]).replace('!', '').trim(),
+                command: String(data.message.split(' ')[0]).replace('!', '').trim().toLowerCase(),
                 argument: data.message.substring(String(data.message.split(' ')[0]).length).trim()
             };
-            if (opts.command != "processCommand") {
+            if (opts.command != "processCommand".toLowerCase()) {
                 let found = false;
                 for (let plugin of this.pluginsLoaded) {
                     for (let command of this.commandHandlerHelper.internalGetAllFuncs(plugin.instantiatedPlugin)) {
@@ -198,7 +198,8 @@ class CommandHandler {
     }
     flushpluginslist(args, data) {
         if (this.fChatLibInstance.isUserChatOP(data.character, data.channel)) {
-            this.fChatLibInstance.channels.set(data.channel, []);
+            let channelTitle = this.fChatLibInstance.channels.get(data.channel).channelTitle;
+            this.fChatLibInstance.channels.set(data.channel, { channelName: data.channel, channelTitle, pluginsList: [] });
             this.fChatLibInstance.sendMessage("Removed all plugins, the bot will restart.", data.channel);
             this.fChatLibInstance.softRestart(data.channel);
         }
