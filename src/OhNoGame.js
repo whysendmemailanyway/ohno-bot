@@ -97,7 +97,7 @@ module.exports.default = class OhNoGame {
         let key = arr[0];
         let value = arr[1];
         if (this.config.hasOwnProperty(key)) {
-            this.config[key] = value;
+            this.config[key] = parseInt(value);
             console.log(`Updated config ${key} to ${value}.`);
             if (key === 'targetScore') this.checkForVictory();
             return true;
@@ -315,8 +315,8 @@ module.exports.default = class OhNoGame {
     acceptDraw4() {
         let challengee = this.getPreviousPlayer();
         this.currentPlayer.addToHand(this.drawX(4));
-        this.endTurn(true);
         this.results = `${this.currentPlayer.getName()} accepts ${challengee.getName()}'s ${this.discards.top().getName()}! They draw 4 cards and miss their turn.`;
+        this.endTurn(true);
     }
 
     isDraw4Legal(player, oldCard) {
@@ -525,7 +525,7 @@ module.exports.default = class OhNoGame {
         });
         let score = new OhNoScore(cards);
         this.currentPlayer.score.addScore(score);
-        messages.push(`${this.currentPlayer.getName()} scored ${score.getValue()} points this round: ${score.toString()}`);
+        messages.push(`${this.currentPlayer.getName()} scored ${score.toString()}`);
         let totalScore = this.currentPlayer.score.getValue();
         messages.push(`This brings their total score to ${totalScore} points!`);
         if (this.checkForVictory()) return;
@@ -550,33 +550,42 @@ module.exports.default = class OhNoGame {
             if (b.score.getValue() > highest) return b;
             return highest;
         }, this.players[0].score.getValue());
+        console.log('highest score');
+        console.log(highestScore);
         this.endGame(this.players.filter(player => player.score.getValue() >= highestScore));
     }
 
     endGame(winners) {
         let str = '';
-        winners.sort((a, b) => b.score.getValue() - a.score.getValue());
-        let highestScore = winners[0].score.getValue();
-        console.log();
-        if (highestScore >= this.config.targetScore) {
-            str += `${winners.map(player => player.getName()).join(', ')} ${highestScore > this.config.targetScore ? 'surpassed' : 'met'} the target score of ${this.config.targetScore} and won the game!!!`;
+        if (winners.length > 0) {
+            winners.sort((a, b) => b.score.getValue() - a.score.getValue());
+            let highestScore = winners[0].score.getValue();
+            console.log();
+            if (highestScore >= this.config.targetScore) {
+                str += `${winners.map(player => player.getName()).join(', ')} ${highestScore > this.config.targetScore ? 'surpassed' : 'met'} the target score of ${this.config.targetScore} and won the game!!!`;
+            } else {
+                str += `The game ended early, so ${winners.map(player => player.getName()).join(', ')} won with ${highestScore} points!`;
+            }
+            console.log();
+            if (winners.length === 1) {
+                str += `Winning total: ${winners[0].score.toString()}`;
+            } else {
+                let score = new OhNoScore();
+                str += `Winning totals:`;
+                winners.forEach(winner => {
+                    score.addScore(winner.score);
+                    str += `\n    ${winner.getName()} scored ${winner.score.toString()}`;
+                });
+                str += `Total score across all winners: ${score.getValue()}`;
+            }
+            str += `\n`;
+            str += `Runners up:`;
         } else {
-            str += `The game ended early, so ${winners.map(player => player.getName()).join(', ')} won with ${highestScore} points!`;
+            str += `The game ended early, nobody reached the target of ${this.targetScore} points.`;
+            str += `\n`;
+            str += `Scores:`;
         }
-        console.log();
-        if (winners.length === 1) {
-            str += `Winning total: ${winners[0].score.toString()}`;
-        } else {
-            let score = new OhNoScore();
-            str += `Winning totals:`;
-            winners.forEach(winner => {
-                score.addScore(winner.score);
-                str += `\n    ${winner.getName()} scored ${winner.score.toString()}`;
-            });
-            str += `Total score across all winners: ${score.getValue()}`;
-        }
-        str += `\n`;
-        str += `Runners up:`;
+        
         let otherPlayerScores = [];
         this.players.forEach(player => {
             if (winners.includes(player)) return;

@@ -32,7 +32,7 @@ class OhNoScore {
     addScore(score) {
         Object.keys(score).forEach(key => {
             if (!this[key]) this[key] = 0;
-            this[key]++;
+            this[key] += score[key];
         });
     }
 }

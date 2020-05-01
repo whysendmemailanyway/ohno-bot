@@ -43,10 +43,6 @@ class OhNo {
             // dirty debug, does whatever i wants it to does
             ddbug: (args, data) => {
                 console.log(args, data);
-                //this.helper.msgRoom(`[b]A new game has begun![/b]\nTom_Kat dealt [b]Blonde Cat (4)[/b] as the starting card. It is Kitty_Kat's turn to play. PM'ing them with their hand...`, this.channel);
-                // return;
-                // this.helper.msgRoom(`Don't! said she.
-                // but i done did.`, data.channel);
                 if (this.game.isInProgress) {
                     this.game.endPrematurely();
                 } else {
@@ -65,11 +61,11 @@ class OhNo {
             return;
         }
         let s = [
-            '!acceptb4: !accept',
-            '!challengeb4: !challenge',
+            '!acceptb4: !accept.',
+            '!challengeb4: !challenge.',
             '!configuregame: !confg.',
             '!endgame: !stopgame, !stopg, !stop, !endg, !end.',
-            '!joingame: !joing, !join',
+            '!joingame: !joing, !join.',
             '!leavegame: !leaveg, !leave.',
             '!listplayers: !listp.',
             '!removeplayer: !removeplayers, !removep, !remp, !delp.',
@@ -220,6 +216,7 @@ class OhNo {
             let oldName = this.game.currentPlayer.getName();
             this.game.pass();
             str = `${oldName} passed their turn.`;
+            this.game.startTurn();
             str += this.helper.promptCurrentPlayer();
         }
         this.helper.msgRoom(str, data.channel);
@@ -250,6 +247,7 @@ class OhNo {
     }
 
     joingame = (args, data) => {
+        // TODO: a player can't join if a game is in progress? even if they want to join as unapproved for the next game?
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !joingame command does one of two things depending on whether a game is in progress. If the game is in progress, the user who entered this command replaces their botified self. If the game is not in progress, the user who entered this command is added to the game. If they are an OP, they will be approved automatically; otherwise, an OP must approve them before they can actually play. Usage: !joingame`, data.channel);
             return;

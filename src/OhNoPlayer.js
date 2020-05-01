@@ -83,8 +83,26 @@ module.exports.default = class OhNoPlayer {
         this.hand.splice(index, 1);
     }
 
-    handToString() {
-        return this.hand.map(card => card ? card.getName() : 'ERROR').join(', ');
+    handToString(withBbc = false) {
+        let results = this.hand.map(card => {
+            if (card) {
+                // blonde, brown, white, black
+                // yellow, brown, white, purple
+                if (withBbc) {
+                    let colorMap = {
+                        'blonde': 'yellow',
+                        'black': 'purple'
+                    }
+                    let cardColor = card.color.toLowerCase();
+                    return `[color=purple][color=${colorMap[cardColor] || cardColor}]${card.getName()}[/color][/color]`
+                } else {
+                    return card.getName();
+                }
+            } else {
+                return `ERROR`;
+            }
+        }).join(', ');
+        return results;
     }
 
     findCardByName(name) {

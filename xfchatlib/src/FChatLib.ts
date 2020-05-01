@@ -277,7 +277,7 @@ export default class FChatLib implements IFChatLib{
 
     pingInterval:NodeJS.Timer;
 
-    floodLimit:number = 1.0;
+    floodLimit:number = 2.0;
     // lastTimeCommandReceived:number = Number.MAX_VALUE;
     lastTimeCommandReceived:number = 0;
     commandsInQueue:number = 0;
@@ -288,8 +288,13 @@ export default class FChatLib implements IFChatLib{
 
     async sendData(messageType: string, content: string):Promise<void>{
         this.commandsInQueue++;
-        let timeToWait = (this.commandsInQueue * this.floodLimit)
-        await this.timeout(timeToWait * 1000);
+        let timeSinceLastCommand = (Date.now() - this.lastTimeCommandReceived)/1000;
+        console.log(`Time since last command: ${timeSinceLastCommand}`);
+        if (timeSinceLastCommand < this.floodLimit) {
+            let timeToWait = (this.floodLimit - timeSinceLastCommand + (this.commandsInQueue * this.floodLimit))
+            console.log(`Time to wait: ${timeToWait}`);
+            await this.timeout(timeToWait * 1000);
+        }
         this.commandsInQueue--;
         this.sendWS(messageType, content);
     }
@@ -478,6 +483,7 @@ export default class FChatLib implements IFChatLib{
     }
 
     sendWS(command, object) {
+        this.lastTimeCommandReceived = Date.now();
         if (this.ws.readyState) {
             this.ws.send(command + ' ' + JSON.stringify(object));
             return true;
