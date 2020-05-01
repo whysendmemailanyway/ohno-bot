@@ -251,6 +251,7 @@ class OhNo {
         } else {
             str = `Successfully updated ${successes} configuration propert${successes === 1 ? 'y' : 'ies'} to the game, failed to update ${failures} configuration propert${failures === 1 ? 'y' : 'ies'} to the game.`;
         }
+        if (this.game.results.length > 0) str += `\n${this.game.results}`;
         this.helper.msgRoom(str, data.channel);
     }
 

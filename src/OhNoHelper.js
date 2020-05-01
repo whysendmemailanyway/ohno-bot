@@ -56,18 +56,32 @@ class OhNoHelper {
             let player = this.game.currentPlayer;
             let name = this.game.currentPlayer.getName();
             str += `It is ${name}'s turn. `;
-            let play;
-            if (Math.random() * 100 % 4 === 0) {
-                play = {
-                    card: this.game.getHighestPlayableCard(),
-                    withShout: Math.random() * 100 % 5 === 0,
-                    wildColor: DECKDATA.COLORS[Math.floor(Math.random() * DECKDATA.COLORS.length)]
-                };
-                console.log(`Going with a dangerous play!`);
-            } else {
-                play = this.game.getSafestPlay();
-                console.log(`Going with a safe play.`);
+            if (this.game.draw4LastTurn) {
+                if (Math.random() * 100 % 4 === 0) {
+                    this.game.challengeDraw4();
+                } else {
+                    this.game.acceptDraw4();
+                }
+                str += this.game.results;
+                continue;
             }
+            let getPlay = () => {
+                let play = {};
+                if (Math.random() * 100 % 4 === 0) {
+                    play = {
+                        card: this.game.getHighestPlayableCard(),
+                        withShout: Math.random() * 100 % 5 === 0,
+                        wildColor: DECKDATA.COLORS[Math.floor(Math.random() * DECKDATA.COLORS.length)]
+                    };
+                    console.log(`Going with a dangerous play!`);
+                } else {
+                    play = this.game.getSafestPlay();
+                    console.log(`Going with a safe play.`);
+                }
+                return play;
+            }
+            let play = getPlay();
+            
             if (!this.game.isCardPlayable(play.card)) {
                 this.game.pass();
                 str += `${name} drew a card. `;
@@ -75,6 +89,7 @@ class OhNoHelper {
                     this.game.pass();
                     str += `${name} passed their turn. `;
                 } else {
+                    play = getPlay();
                     this.game.playCard(play.card, player, play.wildColor, play.withShout);
                 }
             } else {
