@@ -10,6 +10,7 @@ class OhNo {
         this.defaultMessage = `I am broken... sorry!`;
 
         this.aliases = {
+            addb: this.addbot,
             accept: this.acceptb4,
             challenge: this.challengeb4,
             confg: this.configuregame,
@@ -66,6 +67,7 @@ class OhNo {
         }
         let s = [
             '!acceptb4: !accept.',
+            '!addbot: !addb.',
             '!challengeb4: !challenge.',
             '!configuregame: !confg.',
             '!endgame: !stopgame, !stopg, !stop, !endg, !end.',
@@ -275,7 +277,6 @@ class OhNo {
                 failures++;
             }
         });
-        let str = this.defaultMessage;
         if (failures === 0) {
             str = `Added ${successes} bot${successes === 1 ? '' : 's'} to the game.`;
         } else if (successes === 0) {
