@@ -255,6 +255,38 @@ class OhNo {
         this.helper.msgRoom(str, data.channel);
     }
 
+    addbot = (args, data) => {
+        if (this.helper.helpArgs(args)) {
+            this.helper.msgRoom(`The !addbot command adds a bot to the game. Permission: OP only. Usage: !addbot name 1[, name 2, etc]`, data.channel);
+            return;
+        }
+        let username = data.character;
+        let str = this.defaultMessage;
+        if (!this.helper.isUserChatOP(data)) return;
+        let successes = 0;
+        let failures = 0;
+        args.split(', ').forEach(name => {
+            if (this.game.addPlayer(name)) {
+                let player = this.game.findPlayerWithName(name);
+                player.isBot = true;
+                player.isApproved = true;
+                successes++;
+            } else {
+                failures++;
+            }
+        });
+        let str = this.defaultMessage;
+        if (failures === 0) {
+            str = `Added ${successes} bot${successes === 1 ? '' : 's'} to the game.`;
+        } else if (successes === 0) {
+            str = `Failed to add any bots to the game, check your syntax!`;
+        } else {
+            str = `Successfully added ${successes} bot${successes === 1 ? '' : ''} to the game, failed to add ${failures} bot${failures === 1 ? '' : 's'} to the game.`;
+            str += ` Approved / total players is now ${this.game.getApprovedPlayers().length} / ${this.game.allPlayers.length}.`;
+        }
+        this.helper.msgRoom(str, data.channel);
+    }
+
     joingame = (args, data) => {
         // TODO: a player can't join if a game is in progress? even if they want to join as unapproved for the next game?
         if (this.helper.helpArgs(args)) {
