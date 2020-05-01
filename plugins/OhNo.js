@@ -18,7 +18,7 @@ class OhNo {
             removeplayers: this.removeplayer,
             remp: this.removeplayer,
             delp: this.removeplayer,
-            
+            // TODO: list scores along with players if game is in progress; list active players separately from inactive/unapproved players
             listp: this.listplayers,
             
             sc: this.shortcuts,
@@ -26,6 +26,7 @@ class OhNo {
             scuts: this.shortcuts,
             
             startg: this.startgame,
+            // TODO: overload the start command to work for rounds or games
             start: this.startgame,
 
             startr: this.startround,
@@ -43,12 +44,15 @@ class OhNo {
             // dirty debug, does whatever i wants it to does
             ddbug: (args, data) => {
                 console.log(args, data);
+                if (!this.helper.isUserMaster(data)) return;
                 if (this.game.isInProgress) {
                     this.game.endPrematurely();
                 } else {
                     this.game.addPlayer('Tom_Kat');
                     this.game.addPlayer('Kitty_Kat');
                     this.game.allPlayers.forEach(player => player.isApproved = true);
+                    this.game.config.startingHandSize = 4;
+                    this.game.config.targetScore = 10;
                 }
                 this.startgame('', {character: `Tom_Kat`, channel: this.channel});
             }
@@ -166,8 +170,10 @@ class OhNo {
                         if (this.game.isRoundInProgress) {
                             this.game.startTurn();
                             str = this.helper.promptCurrentPlayer();
-                        } else {
+                        } else if (this.game.isInProgress) {
                             str = `${this.game.results}\n\nPlease use the !startround command when all players are ready for the next round.`;
+                        } else {
+                            str = `${this.game.results}\n\nPlease use the !startgame command when all players are ready for a new game.`;
                         }
                     } else {
                         str = this.game.results;
@@ -228,6 +234,8 @@ class OhNo {
             return;
         }
         if (!this.helper.isUserChatOP(data)) return;
+        let successes = 0;
+        let failures = 0;
         args.split(', ').forEach(prop => {
             if (this.game.parseProp(prop)) {
                 successes++;
@@ -237,7 +245,7 @@ class OhNo {
         });
         let str = this.defaultMessage;
         if (failures === 0) {
-            str = `Updated ${successes} configuration properties.`;
+            str = `Updated ${successes} configuration propert${successes === 1 ? 'y' : 'ies'}.`;
         } else if (successes === 0) {
             str = `Failed to update any configuration properties, check your syntax!`;
         } else {

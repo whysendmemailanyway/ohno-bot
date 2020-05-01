@@ -94,7 +94,7 @@ class OhNoHelper {
             str = `${str}It is ${name}'s turn to play. PM'ing them with their hand... `;
             let privateString = `[b]Current game: ${channel}[/b]\n`;
             privateString += `The top discard is [b]${top.getName()}[/b]${top.isWild() ? `, the wild color is [b]${this.game.wildColor}[/b]` : ``}. Your hand:\n`;
-            privateString += `    ${player.handToString()}\n`;
+            privateString += `    ${player.handToString(true, this.game.isCardPlayable)}\n\n`;
             if (this.game.canPlayerPlay() === false) {
                 privateString += `You currently have no playable cards.`;
                 if (this.game.hasDrawnThisTurn) {
@@ -103,7 +103,7 @@ class OhNoHelper {
                     privateString += ` Use the !draw command in ${channel} to draw a new card. Maybe you can play it!`;
                 }
             } else {
-                privateString += `[i]To play a card, enter this command in ${channel}: !play cardname [wildcolor] [shout]\n`;
+                privateString += `Playable cards are listed in [b]bold[/b]. To play a card, enter this command in ${channel}: !play cardname [wildcolor] [shout]\n`;
                 privateString += `See the "How to Play" and "Commands for playing" sections on my profile for more information.`;
                 // privateString += `Parameters in [square brackets] are optional. Only include a wildcolor if you're playing a wild card, and only shout if you will have 1 card left in your hand after playing.\n\n`;
                 // privateString += `Examples: !play blonde bunny, !play brown reverse, !play wild breed 4 white, !play black cat shout\n\n`;

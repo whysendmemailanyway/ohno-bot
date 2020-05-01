@@ -20,7 +20,7 @@ class OhNoScore {
         keys.forEach(key => {
             entries.push(`${this[key]}x ${UTILS.titleCase(key)}`);
         });
-        return this.getValue() + ' points: ' + entries.join(', ') + '.';
+        return `${this.getValue()} points${entries.length > 0 ? `: ${entries.join(', ')}` : ``}.`;
     }
 
     getValue() {

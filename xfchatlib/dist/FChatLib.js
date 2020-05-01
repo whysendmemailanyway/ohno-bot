@@ -44,7 +44,7 @@ class FChatLib {
         this.commandHandlers = [];
         //channels:Map<string, Array<IPlugin>> = new Map<string, Array<IPlugin>>();
         this.channels = new Map();
-        this.floodLimit = 1.0;
+        this.floodLimit = 1.5;
         // lastTimeCommandReceived:number = Number.MAX_VALUE;
         this.lastTimeCommandReceived = 0;
         this.commandsInQueue = 0;
@@ -267,8 +267,13 @@ class FChatLib {
     sendData(messageType, content) {
         return __awaiter(this, void 0, void 0, function* () {
             this.commandsInQueue++;
-            let timeToWait = (this.commandsInQueue * this.floodLimit);
-            yield this.timeout(timeToWait * 1000);
+            let timeSinceLastCommand = (Date.now() - this.lastTimeCommandReceived) / 1000;
+            console.log(`Time since last command: ${timeSinceLastCommand}`);
+            if (timeSinceLastCommand < this.floodLimit) {
+                let timeToWait = (this.floodLimit - timeSinceLastCommand + (this.commandsInQueue * this.floodLimit));
+                console.log(`Time to wait: ${timeToWait}`);
+                yield this.timeout(timeToWait * 1000);
+            }
             this.commandsInQueue--;
             this.sendWS(messageType, content);
         });
@@ -424,6 +429,7 @@ class FChatLib {
         });
     }
     sendWS(command, object) {
+        this.lastTimeCommandReceived = Date.now();
         if (this.ws.readyState) {
             this.ws.send(command + ' ' + JSON.stringify(object));
             return true;

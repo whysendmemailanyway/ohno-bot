@@ -41,7 +41,7 @@ const makeWildCards = () => {
 }
 
 const makeMatcher = () => {
-    let colors = DECKDATA.COLORS.join('|');
+    let colors = [...DECKDATA.COLORS, 'BLOND'].join('|');
     let ranks = [...DECKDATA.NUMBER_RANKS, ...DECKDATA.ACTION_RANKS].join('|');
     let wildRanks = DECKDATA.WILD_RANKS.join('|');
     return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:WILD(?: BREED 4)*))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>SHOUT)*)`, `gi`);
@@ -81,7 +81,12 @@ module.exports.default = class OhNoGame {
         }
         let response = {};
         for (let group in match.groups) {
-            response[group] = match.groups[group];
+            let value = match.groups[group];
+            if (group === 'cardname') {
+                let words = value.split(' ');
+                if (words.length > 1 && words[0].toLowerCase() === 'blond') value = `blonde ${words.slice(1).join(' ')}`;
+            } else if (group === 'wildcolor' && value !== undefined && value.toLowerCase() === 'blond') value = 'blonde';
+            response[group] = value;
         }
         console.log(response);
         this.matcher.lastIndex = 0;
@@ -242,12 +247,14 @@ module.exports.default = class OhNoGame {
         console.log(`The game is afoot! Have fun. :-)`);
         this.results = ``;
         this.players = this.getApprovedPlayers();
-        this.players.forEach(player => player.reset());
+        this.players.forEach(player => player.resetForGame());
         this.isInProgress = true;
         this.startRound();
     }
 
     startRound() {
+        this.hasDrawnThisTurn = false;
+        this.players.forEach(player => player.resetForRound());
         this.results = ``;
         this.isRoundInProgress = true;
         this.playerIndex = this.dealerIndex;
@@ -281,7 +288,7 @@ module.exports.default = class OhNoGame {
         this.hasDrawnThisTurn = false;
     }
 
-    isCardPlayable(newCard, oldCard=null) {
+    isCardPlayable = (newCard, oldCard=null) => {
         if (!oldCard) oldCard = this.discards.top();
         if (newCard.isWild()) return true;
         if (oldCard.isWild()) return this.wildColor === null || newCard.color.toLowerCase() === this.wildColor.toLowerCase();
@@ -446,7 +453,8 @@ module.exports.default = class OhNoGame {
             if (card.isWild() && newWildColor !== null) this.wildColor = UTILS.titleCase(newWildColor);
             if (player.hand.length === 0) {
                 messages.push(`${player.getName()} played their last card and won the round!`);
-                messages.push(...this.endRound());
+                //this.endRound().forEach(messages.push);
+                messages.push(this.endRound());
                 this.setResultsWithArray(messages);
                 return true;
             } else if (player.hand.length === 1) {
@@ -528,7 +536,7 @@ module.exports.default = class OhNoGame {
         messages.push(`${this.currentPlayer.getName()} scored ${score.toString()}`);
         let totalScore = this.currentPlayer.score.getValue();
         messages.push(`This brings their total score to ${totalScore} points!`);
-        if (this.checkForVictory()) return;
+        if (this.checkForVictory()) return this.results;
         this.dealerIndex += 1;
         if (this.dealerIndex >= this.players.length) this.dealerIndex = 0;
         messages.push(`It is now ${this.players[this.dealerIndex].getName()}'s turn to deal.`);
@@ -536,7 +544,7 @@ module.exports.default = class OhNoGame {
     }
 
     checkForVictory() {
-        let winners = this.players.filter(player => player.score.getValue() >= this.targetScore);
+        let winners = this.players.filter(player => player.score.getValue() >= this.config.targetScore);
         if (winners.length > 0) {
             this.endGame(winners);
             return true;
@@ -564,26 +572,24 @@ module.exports.default = class OhNoGame {
             if (highestScore >= this.config.targetScore) {
                 str += `${winners.map(player => player.getName()).join(', ')} ${highestScore > this.config.targetScore ? 'surpassed' : 'met'} the target score of ${this.config.targetScore} and won the game!!!`;
             } else {
-                str += `The game ended early, so ${winners.map(player => player.getName()).join(', ')} won with ${highestScore} points!`;
+                str += `The game ended early, so ${winners.map(player => player.getName()).join(winners.length <= 2 ? ` and ` : `, `)} won with ${highestScore} points!`;
             }
             console.log();
             if (winners.length === 1) {
-                str += `Winning total: ${winners[0].score.toString()}`;
+                str += `\nWinning total: ${winners[0].score.toString()}`;
             } else {
                 let score = new OhNoScore();
-                str += `Winning totals:`;
+                str += `\nWinning totals:`;
                 winners.forEach(winner => {
                     score.addScore(winner.score);
                     str += `\n    ${winner.getName()} scored ${winner.score.toString()}`;
                 });
-                str += `Total score across all winners: ${score.getValue()}`;
+                str += `\nTotal score across all winners: ${score.getValue()}`;
             }
-            str += `\n`;
-            str += `Runners up:`;
+            str += `\nRunners up:`;
         } else {
-            str += `The game ended early, nobody reached the target of ${this.targetScore} points.`;
-            str += `\n`;
-            str += `Scores:`;
+            str += `The game ended early, nobody reached the target of ${this.config.targetScore} points.`;
+            str += `\nScores:`;
         }
         
         let otherPlayerScores = [];
@@ -591,10 +597,14 @@ module.exports.default = class OhNoGame {
             if (winners.includes(player)) return;
             otherPlayerScores.push({name: player.getName(), total: player.score.getValue()});
         });
-        otherPlayerScores.sort((a, b) => {
-            return (b.total - a.total);
-        });
-        str += otherPlayerScores.map(obj => `    ${obj.name} scored ${obj.total} points.`).join('\n');
+        if (otherPlayerScores.length > 0) {
+            otherPlayerScores.sort((a, b) => {
+                return (b.total - a.total);
+            });
+            str += otherPlayerScores.map(obj => `    ${obj.name} scored ${obj.total} points.`).join('\n');
+        } else {
+            str += ` None.`
+        }
         str += `\n`;
         str += `The game has ended, thanks for playing!`;
         this.isInProgress = false;
