@@ -34,3 +34,7 @@ npm start
 AelithBlanchett saved me a ton of work with their fchatlib package! https://www.npmjs.com/package/fchatlib
 
 kadamwhite saved me another significant chunk of time with his card-deck package: https://www.npmjs.com/package/card-deck
+
+Dad jokes courtesy of: https://icanhazdadjoke.com/
+
+Other jokes courtesy of: https://sv443.net/jokeapi/v2
