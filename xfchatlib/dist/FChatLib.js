@@ -44,7 +44,7 @@ class FChatLib {
         this.commandHandlers = [];
         //channels:Map<string, Array<IPlugin>> = new Map<string, Array<IPlugin>>();
         this.channels = new Map();
-        this.floodLimit = 1.5;
+        this.floodLimit = 2.0;
         // lastTimeCommandReceived:number = Number.MAX_VALUE;
         this.lastTimeCommandReceived = 0;
         this.commandsInQueue = 0;
@@ -275,6 +275,7 @@ class FChatLib {
                 yield this.timeout(timeToWait * 1000);
             }
             this.commandsInQueue--;
+            console.log(`Sending WS at ${Date.now()}`);
             this.sendWS(messageType, content);
         });
     }

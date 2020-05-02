@@ -277,7 +277,7 @@ export default class FChatLib implements IFChatLib{
 
     pingInterval:NodeJS.Timer;
 
-    floodLimit:number = 1.5;
+    floodLimit:number = 2.0;
     // lastTimeCommandReceived:number = Number.MAX_VALUE;
     lastTimeCommandReceived:number = 0;
     commandsInQueue:number = 0;
@@ -296,6 +296,7 @@ export default class FChatLib implements IFChatLib{
             await this.timeout(timeToWait * 1000);
         }
         this.commandsInQueue--;
+        console.log(`Sending WS at ${Date.now()}`);
         this.sendWS(messageType, content);
     }
 

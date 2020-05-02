@@ -32,7 +32,17 @@ class OhNoHelper {
     }
 
     msgRoom(text, channel) {
-        this.fChatClient.sendMessage(text, channel);
+        let msgLength = 3000;
+        while (text.length > 0) {
+            let newText = text;
+            if (text.length > msgLength) {
+                newText = text.substring(0, msgLength);
+                text = text.substring(msgLength);
+            } else {
+                text = '';
+            }
+            this.fChatClient.sendMessage(newText, channel);        
+        }
     }
 
     isUserInChannel(username, channel) {
@@ -82,7 +92,7 @@ class OhNoHelper {
             }
             let play = getPlay();
             
-            if (!this.game.isCardPlayable(play.card)) {
+            if (!play.card || !this.game.isCardPlayable(play.card)) {
                 this.game.pass();
                 str += `${name} drew a card. `;
                 if (!this.game.canPlayerPlay()) {
@@ -96,7 +106,15 @@ class OhNoHelper {
                 this.game.playCard(play.card, player, play.wildColor, play.withShout);
             }
             str += this.game.results + ` `;
-            if (this.game.isRoundInProgress) this.game.startTurn();
+            if (this.game.isRoundInProgress) {
+                this.game.startTurn();
+            } else if (this.game.isInProgress) {
+                str += `\n\nPlease use the !startround command when all players are ready for the next round.`;
+                return str;
+            } else {
+                str += `\n\nPlease use the !startgame command when all players are ready for a new game.`;
+                return str;
+            }
         }
         let player = this.game.currentPlayer;
         if (!player.isBot) {
@@ -128,8 +146,12 @@ class OhNoHelper {
             this.msgUser(privateString, player.getName());
             return `${str.substring(0, str.length - 1)}`;
         }
-        // if we reach this point, does that mean the game ended? if so, show them results, baby!
-        return `${str.substring(0, str.length - 1)}\n\nSomething went wrong, not sure whose turn it is...`;
+        if (this.game.isInProgress) {
+            str += `\n\nPlease use the !startround command when all players are ready for the next round.`;
+        } else {
+            str += `\n\nPlease use the !startgame command when all players are ready for a new game.`;
+        }
+        return `${str.substring(0, str.length - 1)}`;
     }
 };
 

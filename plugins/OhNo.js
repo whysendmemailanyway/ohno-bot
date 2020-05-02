@@ -1,6 +1,8 @@
 const OhNoGame = require('../src/OhNoGame').default;
 const OhNoHelper = require('../src/OhNoHelper').default;
 
+const fetch = require('node-fetch');
+
 class OhNo {
     constructor(fChatClient, channel) {
         this.channel = channel;
@@ -56,6 +58,83 @@ class OhNo {
                     this.game.config.targetScore = 10;
                 }
                 this.startgame('', {character: `Tom_Kat`, channel: this.channel});
+            },
+            clean: (args, data) => {
+                if (!this.helper.isUserChatOP(data)) return;
+                this.helper.msgRoom(`/me wipes down the table.`, data.channel);
+            },
+            deepclean: (args, data) => {
+                if (!this.helper.isUserChatOP(data)) return;
+                this.helper.msgRoom(`/me incinerates the table and produces a new one.`, data.channel);
+            },
+            dadjoke: (args, data) => {
+                //if (!this.helper.isUserChatOP(data)) return;
+                const url = 'https://icanhazdadjoke.com/';
+                const options = {
+                    headers: new fetch.Headers({'Accept': 'application/json'})
+                };
+                fetch(url, options)
+                .then(response => {
+                    if (response.ok) return response.json();
+                    throw {message: response.statusText};
+                })
+                .then(responseJson => {
+                    console.log(responseJson.joke);
+                    this.helper.msgRoom(`/me clears its throat: "${responseJson.joke}"`, data.channel);
+                })
+                .catch(error => {
+                    console.log(error.message);
+                    this.helper.msgRoom(`Error getting dad joke: ${error.message}`, data.channel);
+                })
+            },
+            telljoke: async (args, data) => {
+                if (!this.helper.isUserChatOP(data)) return;
+                args = args.length > 0 ? args.toLowerCase().split(' ') : [];
+                let url = 'https://sv443.net/jokeapi/v2/joke/';
+                let isCategorySet = false;
+                let blacklistFlags = args.includes('nolimits') || args.includes('*') ? [] : [`nsfw`, `religious`, `political`, `racist`, `sexist`];
+                if (args.includes('misc') || args.includes('miscellaneous') || args.includes('any') || args.includes('*')) {
+                    url += 'Miscellaneous';
+                    isCategorySet = true;
+                }
+                if (args.includes('programming') || args.includes('any') || args.includes('*')) {
+                    url += `${isCategorySet ? `,` : ``}Programming`;
+                    isCategorySet = true;
+                }
+                if (args.includes('dark') || args.includes('any') || args.includes('*')) {
+                    url += `${isCategorySet ? `,` : ``}Dark`;
+                    isCategorySet = true;
+                }
+                if (!isCategorySet) url += 'Programming,Miscellaneous';
+
+                url += '?format=json';
+                if (blacklistFlags.length > 0) url += `&blacklistFlags=${blacklistFlags.join(`,`)}`;
+                console.log(url);
+                fetch(url)
+                .then(response => {
+                    if (response.ok) return response.json();
+                    throw {message: response.statusText};
+                })
+                .then(responseJson => {
+                    if (responseJson.type !== 'single' && responseJson.type !== 'twopart') {
+                        console.log(`Unknown joke: ${JSON.stringify(responseJson)}`);
+                        this.helper.msgRoom(`/me coughs awkwardly. "This is embarrassing, but I don't recognize the type of joke I found. I blame Tom_Kat."`, data.channel);
+                        return;
+                    }
+                    this.helper.msgRoom(`/me downloads some humor. "I hope you enjoy this ${responseJson.category.toLowerCase()} joke." It clears its throat. "${responseJson.type === 'single' ? responseJson.joke : responseJson.setup}"`, data.channel);
+                    console.log(responseJson.type === 'single' ? responseJson.joke : responseJson.setup);
+                    if (responseJson.type === 'twopart') {
+                        console.log(responseJson.delivery);
+                        setTimeout(() => {
+                            this.helper.msgRoom(`"${responseJson.delivery}"`, data.channel);
+                        }, 6000);
+                        return;
+                    }
+                })
+                .catch(error => {
+                    console.log(`There was an error getting or telling a joke...`);
+                    console.log(error.message);
+                })
             }
         }
     }
@@ -269,7 +348,7 @@ class OhNo {
         let failures = 0;
         args.split(', ').forEach(name => {
             if (this.game.addPlayer(name)) {
-                let player = this.game.findPlayerWithName(name);
+                let player = this.game.findPlayerWithName(name, this.game.allPlayers);
                 player.isBot = true;
                 player.isApproved = true;
                 successes++;

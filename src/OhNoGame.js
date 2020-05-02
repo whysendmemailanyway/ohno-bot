@@ -246,6 +246,7 @@ module.exports.default = class OhNoGame {
 
     startGame() {
         console.log(`The game is afoot! Have fun. :-)`);
+        this.dealerIndex = 0;
         this.results = ``;
         this.players = this.getApprovedPlayers();
         this.players.forEach(player => player.resetForGame());
