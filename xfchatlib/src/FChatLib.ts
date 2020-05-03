@@ -281,23 +281,35 @@ export default class FChatLib implements IFChatLib{
     // lastTimeCommandReceived:number = Number.MAX_VALUE;
     lastTimeCommandReceived:number = 0;
     commandsInQueue:number = 0;
+    commandQueues = {};
 
     timeout(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async sendData(messageType: string, content: string):Promise<void>{
-        this.commandsInQueue++;
-        let timeSinceLastCommand = (Date.now() - this.lastTimeCommandReceived)/1000;
-        console.log(`Time since last command: ${timeSinceLastCommand}`);
-        if (timeSinceLastCommand < this.floodLimit) {
-            let timeToWait = (this.floodLimit - timeSinceLastCommand + (this.commandsInQueue * this.floodLimit))
-            console.log(`Time to wait: ${timeToWait}`);
-            await this.timeout(timeToWait * 1000);
+    async sendData(messageType: string, content: string, queueKey: string):Promise<void>{
+        if (!this.commandQueues[queueKey]) this.commandQueues[queueKey] = {commands: [], lastReceived: new Date('January 1, 2000 00:00:00')};
+        let q = this.commandQueues[queueKey];
+        let timeToWait = q.commands.length * this.floodLimit;
+        for (let i = 0; i < q.commands.length; i++) {
+            timeToWait += q.commands[i].timeToWait;
         }
-        this.commandsInQueue--;
+        let command = {messageType, content, timeToWait};
+        q.commands.push(command);
+        let timeSinceLastCommand = (Date.now() - q.lastReceived)/1000;
+        console.log(`Time since last command for ${queueKey}: ${timeSinceLastCommand}`);
+        console.log(`Waiting approximately ${timeToWait/1000} seconds...`)
+        if (timeSinceLastCommand < this.floodLimit || timeToWait > 0) {
+            while (command.timeToWait > 0) {
+                //console.log(`Time to wait: ${timeToWait}`);
+                await this.timeout(1000);
+                command.timeToWait -= 1000;
+            }
+        }
+        q.lastReceived = Date.now();
         console.log(`Sending WS at ${Date.now()}`);
         this.sendWS(messageType, content);
+        q.commands.splice(q.commands.indexOf(command), 1);
     }
 
     constructor(configuration:IConfig){
@@ -484,7 +496,6 @@ export default class FChatLib implements IFChatLib{
     }
 
     sendWS(command, object) {
-        this.lastTimeCommandReceived = Date.now();
         if (this.ws.readyState) {
             this.ws.send(command + ' ' + JSON.stringify(object));
             return true;
@@ -496,14 +507,14 @@ export default class FChatLib implements IFChatLib{
         let json:any = {};
         json.channel = channel;
         json.message = message;
-        this.sendData('MSG', json);
+        this.sendData('MSG', json, channel);
     }
 
     sendPrivMessage(message, character){
         let json:any = {};
         json.message = message;
         json.recipient = character;
-        this.sendData('PRI', json);
+        this.sendData('PRI', json, recipient);
     }
 
     getUserList(channel){
@@ -544,7 +555,7 @@ export default class FChatLib implements IFChatLib{
         let json:any = {};
         json.dice = customDice || "1d10";
         json.channel = channel;
-        this.sendData("RLL", json);
+        this.sendData("RLL", json, channel);
     }
 
     updateRoomsConfig():void{
@@ -584,10 +595,12 @@ export default class FChatLib implements IFChatLib{
         });
 
         this.ws.on('close', (data) => {
+            console.log('The socket was closed.');
             process.exit();
         });
 
         this.ws.on('error', (data) => {
+            console.log('The socket errored.');
             setTimeout(() => {
                 this.connect();
             }, 60000);

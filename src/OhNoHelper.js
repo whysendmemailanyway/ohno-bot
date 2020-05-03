@@ -57,6 +57,13 @@ class OhNoHelper {
         return (!args || args.length === 0 || this.helpArgs(args));
     }
 
+    getTurnOutput(player) {
+        let privateString = `[b]Current game: ${this.fChatClient.channels.get(this.channel).channelTitle}[/b]\n`;
+        privateString += `The top discard is [b]${top.getName()}[/b]${top.isWild() ? `, the wild color is [b]${this.game.wildColor}[/b]` : ``}. Your hand:\n`;
+        privateString += `    ${player.handToString(true, this.game.isCardPlayable)}\n\n`;
+        return privateString;
+    }
+
     promptCurrentPlayer() {
         // TODO: handle bots playing to completion
         // is this even fair? technically, I should handle each bot's
@@ -80,7 +87,7 @@ class OhNoHelper {
                 if (Math.random() * 100 % 4 === 0) {
                     play = {
                         card: this.game.getHighestPlayableCard(),
-                        withShout: Math.random() * 100 % 5 === 0,
+                        withShout: Math.random() * 100 % 4 !== 0,
                         wildColor: DECKDATA.COLORS[Math.floor(Math.random() * DECKDATA.COLORS.length)]
                     };
                     console.log(`Going with a dangerous play!`);
@@ -125,9 +132,7 @@ class OhNoHelper {
             let channel = this.fChatClient.channels.get(this.channel).channelTitle;
             let name = player.getName();
             str = `${str}It is ${name}'s turn to play. PM'ing them with their hand... `;
-            let privateString = `[b]Current game: ${channel}[/b]\n`;
-            privateString += `The top discard is [b]${top.getName()}[/b]${top.isWild() ? `, the wild color is [b]${this.game.wildColor}[/b]` : ``}. Your hand:\n`;
-            privateString += `    ${player.handToString(true, this.game.isCardPlayable)}\n\n`;
+            let privateString = this.getTurnOutput(player);
             if (this.game.canPlayerPlay() === false) {
                 privateString += `You currently have no playable cards.`;
                 if (this.game.hasDrawnThisTurn) {

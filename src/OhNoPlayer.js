@@ -11,6 +11,7 @@ module.exports.default = class OhNoPlayer {
         this.isBot = false;
         this.isApproved = false;
         this.alias;
+        this.wasHuman = true;
         this.resetForGame();
     }
 

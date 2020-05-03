@@ -27,6 +27,8 @@ class OhNo {
             sc: this.shortcuts,
             shortc: this.shortcuts,
             scuts: this.shortcuts,
+
+            hand: this.showhand,
             
             startg: this.startgame,
             // TODO: overload the start command to work for rounds or games
@@ -113,6 +115,7 @@ class OhNo {
                 fetch(url)
                 .then(response => {
                     if (response.ok) return response.json();
+                    console.log(JSON.stringify(response));
                     throw {message: response.statusText};
                 })
                 .then(responseJson => {
@@ -132,6 +135,7 @@ class OhNo {
                     }
                 })
                 .catch(error => {
+                    this.helper.msgRoom(`/me coughs awkwardly. "This is embarrassing, but I experienced an error downloading that joke. I blame Tom_Kat."`, data.channel);
                     console.log(`There was an error getting or telling a joke...`);
                     console.log(error.message);
                 })
@@ -155,10 +159,27 @@ class OhNo {
             '!listplayers: !listp.',
             '!removeplayer: !removeplayers, !removep, !remp, !delp.',
             '!shortcuts: !shortc, !scuts, !sc.',
+            '!showhand: !hand',
             '!startgame: !startg, !start.',
             '!startround: !startr.'
         ]
         this.helper.msgRoom(s.join(' '), data.channel);
+    }
+
+    showhand = (args, data) => {
+        if (this.helper.helpArgs(args)) {
+            this.helper.msgRoom(`The !showhand command is used to PM you your hand. Permission: any player who is in an active game. Usage: !showhand`, data.channel);
+            return;
+        }
+        let str = this.defaultMessage;
+        let name = data.character;
+        let player = this.game.findPlayerWithName(name);
+        if (player === null) {
+            str = `You have no hand, ${name}, you are not a player in the current game.`;
+        } else {
+            str = this.helper.getTurnOutput(player);
+        }
+        this.helper.msgRoom(str, data.channel);
     }
 
     acceptb4 = (args, data) => {
@@ -332,7 +353,7 @@ class OhNo {
         } else {
             str = `Successfully updated ${successes} configuration propert${successes === 1 ? 'y' : 'ies'} to the game, failed to update ${failures} configuration propert${failures === 1 ? 'y' : 'ies'} to the game.`;
         }
-        if (this.game.results.length > 0) str += `\n${this.game.results}`;
+        if (this.game.results && this.game.results.length > 0) str += `\n${this.game.results}`;
         this.helper.msgRoom(str, data.channel);
     }
 
@@ -349,9 +370,13 @@ class OhNo {
         args.split(', ').forEach(name => {
             if (this.game.addPlayer(name)) {
                 let player = this.game.findPlayerWithName(name, this.game.allPlayers);
-                player.isBot = true;
-                player.isApproved = true;
-                successes++;
+                if (this.game.approvePlayer(username)) {
+                    player.isBot = true;
+                    player.wasHuman = false;
+                    successes++;
+                } else {
+                    failures++;
+                }
             } else {
                 failures++;
             }
@@ -437,7 +462,7 @@ class OhNo {
                 str = `Failed to remove ${username}...`;
             }
         } else {
-            if (this.game.removePlayer(player)) {
+            if (this.game.removePlayer(username)) {
                 str = `Removed ${player.getName()} from the game. Rejoin with !join`;
             } else {
                 str = `Failed to remove ${username} from the game. Maybe they weren't in the game to begin with?`;
@@ -538,7 +563,26 @@ class OhNo {
         if (this.game.allPlayers.length === 0) {
             this.helper.msgRoom(`There are no players yet. Players must use the !join command to join, and an OP must !approve them before they can play.`, data.channel);
         }else {
-            this.helper.msgRoom(`Starting with the first player and going clockwise (U = unapproved): ${this.game.allPlayers.map(player => player.getName() + (player.isApproved ? '' : ' (U)')).join(', ')}.`, data.channel);
+            let str = ``;
+            let unapproved = [];
+            let approved = [];
+            let ingame = [];
+            this.game.allPlayers.forEach(player => {
+                if (!player.isApproved) {
+                    unapproved.push(player);
+                } else if (this.game.players.includes(player)) {
+                    ingame.push(player);
+                } else {
+                    approved.push(player);
+                }
+            })
+            const playersToString = (players, withScore=false) => {
+                return players.map(player => player.getName() + (withScore ? ` ${player.score.getValue()} points` : '')).join(', ');
+            }
+            str += `${unapproved.length > 0 ? `Unapproved players: ${playersToString(unapproved)}` : `There are no unapproved players.`}`
+            str += `${approved.length > 0 ? ` Approved players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approved)}` : ``}`
+            if (this.game.isInProgress) str += ` ${ingame.length > 0 ? `Approved players in current game: ${playersToString(approved, true)}` : `There are no players in the current game... somehow.`}`
+            this.helper.msgRoom(str, data.channel);
         }
     }
 };

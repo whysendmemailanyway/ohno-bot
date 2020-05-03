@@ -79,7 +79,7 @@ export interface IFChatLib {
     lastTimeCommandReceived:number;
     commandsInQueue:number;
 
-    sendData(messageType: string, content: string):Promise<void>;
+    sendData(messageType: string, content: string, queueKey: string):Promise<void>;
     generateCommandHandlers():void;
     setFloodLimit(delay):void;
     connect():Promise<void>;

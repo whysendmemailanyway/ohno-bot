@@ -44,7 +44,7 @@ const makeMatcher = () => {
     let colors = [...DECKDATA.COLORS, 'BLOND'].join('|');
     let ranks = [...DECKDATA.NUMBER_RANKS, ...DECKDATA.ACTION_RANKS].join('|');
     let wildRanks = DECKDATA.WILD_RANKS.join('|');
-    return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:WILD(?: BREED 4)*))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>SHOUT)*)`, `gi`);
+    return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:WILD(?: BREED 4)*))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>!*SHOUT)*)`, `gi`);
 }
 
 module.exports.default = class OhNoGame {
@@ -85,7 +85,9 @@ module.exports.default = class OhNoGame {
             if (group === 'cardname') {
                 let words = value.split(' ');
                 if (words.length > 1 && words[0].toLowerCase() === 'blond') value = `blonde ${words.slice(1).join(' ')}`;
-            } else if (group === 'wildcolor' && value !== undefined && value.toLowerCase() === 'blond') value = 'blonde';
+            } else if (group === 'wildcolor' && value !== undefined && value.toLowerCase() === 'blond') {
+                value = 'blonde';
+            } else if (group === 'shout' && value.toLowerCase() === '!shout') value = 'shout';
             response[group] = value;
         }
         console.log(response);
@@ -144,9 +146,14 @@ module.exports.default = class OhNoGame {
             let player = this.allPlayers[i];
             if (this.isInProgress) {
                 if (player.isBot) {
-                    player.isBot = false;
-                    console.log(`Unbotted ${player.getName()}.`);
-                    return true;
+                    if (player.wasHuman) {
+                        player.isBot = false;
+                        console.log(`Unbotted ${player.getName()}.`);
+                        return true;
+                    } else {
+                        console.log(`Player is already in the game and was always a bot`);
+                        return false;
+                    }
                 } else {
                     console.log(`Player is already added and not a bot`);
                     return false;
@@ -324,7 +331,7 @@ module.exports.default = class OhNoGame {
     acceptDraw4() {
         let challengee = this.getPreviousPlayer();
         this.currentPlayer.addToHand(this.drawX(4));
-        this.results = `${this.currentPlayer.getName()} accepts ${challengee.getName()}'s ${this.discards.top().getName()}! They draw 4 cards and miss their turn.`;
+        this.results = `${this.currentPlayer.getName()} accepts ${challengee.getName()}'s ${this.discards.top().getName()}! They draw 4 cards and miss their turn. `;
         this.endTurn(true);
     }
 
@@ -354,7 +361,7 @@ module.exports.default = class OhNoGame {
             let oldCard = this.discards.top(2)[1];
             let canPlay = this.isDraw4Legal(challengee, oldCard);
             if (canPlay) {
-                messages.push(`${challengee.getName()} played their ${d4name} illegally now draws 4 cards!`);
+                messages.push(`${challengee.getName()} played their ${d4name} illegally and now draws 4 cards!`);
                 challengee.addToHand(this.drawX(4));
                 this.endTurn(false);
             } else {
