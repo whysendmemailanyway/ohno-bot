@@ -54,7 +54,7 @@ class OhNo {
                     this.game.endPrematurely();
                 } else {
                     this.game.addPlayer('Tom_Kat');
-                    this.game.addPlayer('Kitty_Kat');
+                    this.game.addPlayer('Ellen Strand');
                     this.game.allPlayers.forEach(player => player.isApproved = true);
                     this.game.config.startingHandSize = 4;
                     this.game.config.targetScore = 10;
@@ -176,10 +176,11 @@ class OhNo {
         let player = this.game.findPlayerWithName(name);
         if (player === null) {
             str = `You have no hand, ${name}, you are not a player in the current game.`;
+            this.helper.msgRoom(str, data.channel);
         } else {
             str = this.helper.getTurnOutput(player);
+            this.helper.msgUser(str, data.character);
         }
-        this.helper.msgRoom(str, data.channel);
     }
 
     acceptb4 = (args, data) => {
@@ -509,6 +510,8 @@ class OhNo {
         } else {
             this.game.startGame();
             str = `[b]A new game has begun![/b]\n${this.helper.promptCurrentPlayer()}`;
+            console.log('HEY!');
+            console.log(str);
         }
         this.helper.msgRoom(str, data.channel);
     }
@@ -581,7 +584,7 @@ class OhNo {
             }
             str += `${unapproved.length > 0 ? `Unapproved players: ${playersToString(unapproved)}` : `There are no unapproved players.`}`
             str += `${approved.length > 0 ? ` Approved players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approved)}` : ``}`
-            if (this.game.isInProgress) str += ` ${ingame.length > 0 ? `Approved players in current game: ${playersToString(approved, true)}` : `There are no players in the current game... somehow.`}`
+            if (this.game.isInProgress) str += ` ${ingame.length > 0 ? `Approved players in current game: ${playersToString(ingame, true)}` : `There are no players in the current game... somehow.`}`
             this.helper.msgRoom(str, data.channel);
         }
     }

@@ -277,7 +277,7 @@ export default class FChatLib implements IFChatLib{
 
     pingInterval:NodeJS.Timer;
 
-    floodLimit:number = 2.0;
+    floodLimit:number = 1.0;
     // lastTimeCommandReceived:number = Number.MAX_VALUE;
     lastTimeCommandReceived:number = 0;
     commandsInQueue:number = 0;
@@ -288,26 +288,32 @@ export default class FChatLib implements IFChatLib{
     }
 
     async sendData(messageType: string, content: string, queueKey: string):Promise<void>{
+        queueKey = 'GLOBAL';
         if (!this.commandQueues[queueKey]) this.commandQueues[queueKey] = {commands: [], lastReceived: new Date('January 1, 2000 00:00:00')};
         let q = this.commandQueues[queueKey];
+        q.lastReceived = Date.now();
         let timeToWait = q.commands.length * this.floodLimit;
         for (let i = 0; i < q.commands.length; i++) {
             timeToWait += q.commands[i].timeToWait;
         }
+        let timeSinceLastCommand = (Date.now() - q.lastReceived);
+        if (timeSinceLastCommand < this.floodLimit) {
+            timeToWait += (this.floodLimit * 1000) - timeSinceLastCommand;
+        }
         let command = {messageType, content, timeToWait};
         q.commands.push(command);
-        let timeSinceLastCommand = (Date.now() - q.lastReceived)/1000;
         console.log(`Time since last command for ${queueKey}: ${timeSinceLastCommand}`);
-        console.log(`Waiting approximately ${timeToWait/1000} seconds...`)
-        if (timeSinceLastCommand < this.floodLimit || timeToWait > 0) {
-            while (command.timeToWait > 0) {
+        if (timeToWait > 0) {
+            console.log(`Waiting approximately ${timeToWait/1000} seconds...`)
+            while (command.timeToWait > 0 || q.commands.indexOf(command) !== 0) {
                 //console.log(`Time to wait: ${timeToWait}`);
-                await this.timeout(1000);
-                command.timeToWait -= 1000;
+                await this.timeout(command.timeToWait <= 0 ? 500 : command.timeToWait);
+                //command.timeToWait -= 1000;
+                console.log(`Waited. Remaining time to wait (s): ${command.timeToWait/1000}. Command index: ${q.commands.indexOf(command)}`);
             }
         }
-        q.lastReceived = Date.now();
         console.log(`Sending WS at ${Date.now()}`);
+        console.log(content);
         this.sendWS(messageType, content);
         q.commands.splice(q.commands.indexOf(command), 1);
     }
@@ -514,7 +520,7 @@ export default class FChatLib implements IFChatLib{
         let json:any = {};
         json.message = message;
         json.recipient = character;
-        this.sendData('PRI', json, recipient);
+        this.sendData('PRI', json, character);
     }
 
     getUserList(channel){
@@ -589,6 +595,7 @@ export default class FChatLib implements IFChatLib{
             this.ws = new WebSocketClient('wss://chat.f-list.net/chat2');
         }
         this.ws.on('open', (data) => {
+            console.log('The socket was opened.');
             this.sendWS('IDN', json);
             clearInterval(pingInterval);
             this.pingInterval = setInterval(() => { this.ws.send('PIN'); }, 25000);

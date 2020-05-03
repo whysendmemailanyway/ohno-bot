@@ -48,6 +48,7 @@ class FChatLib {
         // lastTimeCommandReceived:number = Number.MAX_VALUE;
         this.lastTimeCommandReceived = 0;
         this.commandsInQueue = 0;
+        this.commandQueues = {};
         if (configuration == null) {
             console.log('No configuration passed, cannot start.');
             process.exit();
@@ -264,19 +265,37 @@ class FChatLib {
     timeout(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-    sendData(messageType, content) {
+    sendData(messageType, content, queueKey) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.commandsInQueue++;
-            let timeSinceLastCommand = (Date.now() - this.lastTimeCommandReceived) / 1000;
-            console.log(`Time since last command: ${timeSinceLastCommand}`);
-            if (timeSinceLastCommand < this.floodLimit) {
-                let timeToWait = (this.floodLimit - timeSinceLastCommand + (this.commandsInQueue * this.floodLimit));
-                console.log(`Time to wait: ${timeToWait}`);
-                yield this.timeout(timeToWait * 1000);
+            queueKey = 'GLOBAL';
+            if (!this.commandQueues[queueKey])
+                this.commandQueues[queueKey] = { commands: [], lastReceived: new Date('January 1, 2000 00:00:00') };
+            let q = this.commandQueues[queueKey];
+            q.lastReceived = Date.now();
+            let timeToWait = q.commands.length * this.floodLimit;
+            for (let i = 0; i < q.commands.length; i++) {
+                timeToWait += q.commands[i].timeToWait;
             }
-            this.commandsInQueue--;
+            let timeSinceLastCommand = (Date.now() - q.lastReceived);
+            if (timeSinceLastCommand < this.floodLimit) {
+                timeToWait += (this.floodLimit * 1000) - timeSinceLastCommand;
+            }
+            let command = { messageType, content, timeToWait };
+            q.commands.push(command);
+            console.log(`Time since last command for ${queueKey}: ${timeSinceLastCommand}`);
+            if (timeToWait > 0) {
+                console.log(`Waiting approximately ${timeToWait / 1000} seconds...`);
+                while (command.timeToWait > 0 || q.commands.indexOf(command) !== 0) {
+                    //console.log(`Time to wait: ${timeToWait}`);
+                    yield this.timeout(1000);
+                    command.timeToWait -= 1000;
+                    console.log(`Waited a second. Remaining time to wait (s): ${command.timeToWait / 1000}. Command index: ${q.commands.indexOf(command)}`);
+                }
+            }
             console.log(`Sending WS at ${Date.now()}`);
+            console.log(content);
             this.sendWS(messageType, content);
+            q.commands.splice(q.commands.indexOf(command), 1);
         });
     }
     //create one commandHandler per room
@@ -430,7 +449,6 @@ class FChatLib {
         });
     }
     sendWS(command, object) {
-        this.lastTimeCommandReceived = Date.now();
         if (this.ws.readyState) {
             this.ws.send(command + ' ' + JSON.stringify(object));
             return true;
@@ -441,13 +459,13 @@ class FChatLib {
         let json = {};
         json.channel = channel;
         json.message = message;
-        this.sendData('MSG', json);
+        this.sendData('MSG', json, channel);
     }
     sendPrivMessage(message, character) {
         let json = {};
         json.message = message;
         json.recipient = character;
-        this.sendData('PRI', json);
+        this.sendData('PRI', json, character);
     }
     getUserList(channel) {
         if (this.usersInChannel[channel] == undefined) {
@@ -481,7 +499,7 @@ class FChatLib {
         let json = {};
         json.dice = customDice || "1d10";
         json.channel = channel;
-        this.sendData("RLL", json);
+        this.sendData("RLL", json, channel);
     }
     updateRoomsConfig() {
         if (!fs.existsSync(configDir)) {
@@ -511,14 +529,17 @@ class FChatLib {
             this.ws = new WebSocketClient('wss://chat.f-list.net/chat2');
         }
         this.ws.on('open', (data) => {
+            console.log('The socket was opened.');
             this.sendWS('IDN', json);
             clearInterval(pingInterval);
             this.pingInterval = setInterval(() => { this.ws.send('PIN'); }, 25000);
         });
         this.ws.on('close', (data) => {
+            console.log('The socket was closed.');
             process.exit();
         });
         this.ws.on('error', (data) => {
+            console.log('The socket errored.');
             setTimeout(() => {
                 this.connect();
             }, 60000);

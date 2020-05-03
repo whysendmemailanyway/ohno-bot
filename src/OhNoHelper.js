@@ -59,7 +59,7 @@ class OhNoHelper {
 
     getTurnOutput(player) {
         let privateString = `[b]Current game: ${this.fChatClient.channels.get(this.channel).channelTitle}[/b]\n`;
-        privateString += `The top discard is [b]${top.getName()}[/b]${top.isWild() ? `, the wild color is [b]${this.game.wildColor}[/b]` : ``}. Your hand:\n`;
+        privateString += `The top discard is [b]${this.game.discards.top().getName()}[/b]${this.game.discards.top().isWild() ? `, the wild color is [b]${this.game.wildColor}[/b]` : ``}. Your hand:\n`;
         privateString += `    ${player.handToString(true, this.game.isCardPlayable)}\n\n`;
         return privateString;
     }
@@ -125,7 +125,6 @@ class OhNoHelper {
         }
         let player = this.game.currentPlayer;
         if (!player.isBot) {
-            let top = this.game.discards.top();
             if (this.game.draw4LastTurn) {
                 return `${str.substring(0, str.length - 1)}`;
             }

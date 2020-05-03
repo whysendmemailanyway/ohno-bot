@@ -87,7 +87,7 @@ module.exports.default = class OhNoGame {
                 if (words.length > 1 && words[0].toLowerCase() === 'blond') value = `blonde ${words.slice(1).join(' ')}`;
             } else if (group === 'wildcolor' && value !== undefined && value.toLowerCase() === 'blond') {
                 value = 'blonde';
-            } else if (group === 'shout' && value.toLowerCase() === '!shout') value = 'shout';
+            } else if (group === 'shout' && value !== undefined && value.toLowerCase() === '!shout') value = 'shout';
             response[group] = value;
         }
         console.log(response);

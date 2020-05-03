@@ -67,7 +67,7 @@ export interface IFChatLib {
     floodLimit: number;
     lastTimeCommandReceived: number;
     commandsInQueue: number;
-    sendData(messageType: string, content: string): Promise<void>;
+    sendData(messageType: string, content: string, queueKey: string): Promise<void>;
     generateCommandHandlers(): void;
     setFloodLimit(delay: any): void;
     connect(): Promise<void>;

@@ -70,8 +70,9 @@ export default class FChatLib implements IFChatLib {
     floodLimit: number;
     lastTimeCommandReceived: number;
     commandsInQueue: number;
+    commandQueues: {};
     timeout(ms: any): Promise<{}>;
-    sendData(messageType: string, content: string): Promise<void>;
+    sendData(messageType: string, content: string, queueKey: string): Promise<void>;
     constructor(configuration: IConfig);
     generateCommandHandlers(): void;
     setFloodLimit(delay: any): void;
