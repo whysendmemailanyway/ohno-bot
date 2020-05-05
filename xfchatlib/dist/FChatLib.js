@@ -101,7 +101,7 @@ class FChatLib {
         }
         catch (err) { }
         if (this.config.room !== undefined && this.channels.get(this.config.room) == null) {
-            this.channels.set(this.config.room, { channelTitle: 'defaultTitle', pluginsList: [], channelName: 'defaultName' });
+            //this.channels.set(this.config.room, {channelTitle: 'defaultTitle', pluginsList: [], channelName: 'defaultName'});
             this.updateRoomsConfig();
         }
     }
@@ -488,9 +488,9 @@ class FChatLib {
     sendWS(command, object) {
         if (this.ws.readyState) {
             let data = command + ' ' + JSON.stringify(object);
-            console.log(`Message Sent:`);
-            console.log(data);
-            console.log(`-----`);
+            // console.log(`Message Sent:`);
+            // console.log(data)
+            // console.log(`-----`);
             this.ws.send(data);
             return true;
         }

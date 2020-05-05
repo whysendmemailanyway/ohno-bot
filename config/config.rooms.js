@@ -1,1 +1,1 @@
-"[[\"\",{\"channelTitle\":\"defaultTitle\",\"pluginsList\":[],\"channelName\":\"defaultName\"}],[\"ADH-ce2fb116146c8ff5de9b\",{\"channelName\":\"ADH-ce2fb116146c8ff5de9b\",\"channelTitle\":\"ohnotest\",\"pluginsList\":[{\"name\":\"OhNo\"}]}],[\"ADH-dd9f9698a0479056bc55\",{\"channelName\":\"ADH-dd9f9698a0479056bc55\",\"channelTitle\":\"Beta testing OhNo\",\"pluginsList\":[{\"name\":\"OhNo\"}]}]]"
+"[[\"ADH-dd9f9698a0479056bc55\",{\"channelName\":\"ADH-dd9f9698a0479056bc55\",\"channelTitle\":\"Beta testing OhNo\",\"pluginsList\":[{\"name\":\"OhNo\"}]}]]"

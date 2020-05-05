@@ -60,75 +60,58 @@ class OhNoHelper {
 
     getTurnOutput = (player) => {
         let privateString = `[b]Current game: ${this.fChatClient.channels.get(this.channel).channelTitle}[/b]\n`;
-        privateString += `The top discard is [b]${this.game.discards.top().getName()}[/b]${this.game.discards.top().isWild() ? `, the wild color is [b]${this.game.wildColor}[/b]` : ``}. Your hand:\n`;
+        privateString += `The top discard is [b]${this.game.discards.top().getName(true)}[/b]${this.game.discards.top().isWild() ? `, the wild color is [b][color=purple][color=${DECKDATA.COLOR_MAP[this.game.wildColor.toLowerCase()]}]${UTILS.titleCase(this.game.wildColor)}[/color][/color][/b]` : ``}. Your hand:\n`;
         privateString += `    ${player.handToString(true, this.game.isCardPlayable)}\n\n`;
         return privateString;
     }
 
-    promptCurrentPlayer = () => {
-        let str = `${this.game.results}`;
-        while (this.game.currentPlayer.isBot && this.game.isRoundInProgress) {
-            let player = this.game.currentPlayer;
-            let name = this.game.currentPlayer.getName();
-            str += ` It is ${name}'s turn. `;
-            if (this.game.draw4LastTurn) {
-                if (Math.floor(Math.random() * 100) % 4) {
-                    this.game.challengeDraw4();
+    doBotTurn = async (callback) => {
+        if (!this.game.isRoundInProgress) return;
+        setTimeout(() => {
+            if (!this.game.isRoundInProgress) return;
+            callback();
+        }, this.game.botTurnTime * 1000);
+    }
+
+    checkForVictory = (messageRoom=false) => {
+        let str = `Helper is broken!`;
+        if (this.game.isRoundInProgress) {
+            this.game.startTurn();
+            str = this.promptCurrentPlayer();
+        } else {
+            str = `${this.game.results}\n\n`
+            if (this.game.isInProgress) {
+                if (this.game.containsAllBots()) {
+                    str += `The round is over. The game consists of bots only; please use the !start command to start the next round.`;
                 } else {
-                    this.game.acceptDraw4();
-                }
-                str += this.game.results;
-                continue;
-            }
-            let getPlay = () => {
-                let play = {};
-                if (Math.floor(Math.random() * 100) % 4) {
-                    play = {
-                        card: this.game.getHighestPlayableCard(),
-                        withShout: player.hand.length == 2 ? Math.floor(Math.random() * 100) % 4 !== 0 : false,
-                        wildColor: Math.floor(Math.random() * 100) % 4 === 0 ? DECKDATA.COLORS[Math.floor(Math.random() * DECKDATA.COLORS.length)] : player.getMostCommonColor()
-                    };
-                    console.log(`Going with a dangerous play!`);
-                } else {
-                    play = this.game.getSafestPlay();
-                    console.log(`Going with a safe play.`);
-                }
-                return play;
-            }
-            let play = getPlay();
-            console.log(play);
-            if (!play.card || !this.game.isCardPlayable(play.card)) {
-                this.game.pass();
-                str += `${name} drew a card. `;
-                if (!this.game.canPlayerPlay()) {
-                    this.game.pass();
-                    str += `${name} passed their turn. `;
-                } else {
-                    play = getPlay();
-                    this.game.playCard(play.card, player, play.wildColor, play.withShout);
+                    str += `The round is over. Use !ready to ready up for the next round. Round begins when all approved players are ready.`;
                 }
             } else {
-                this.game.playCard(play.card, player, play.wildColor, play.withShout);
-            }
-            str = `${str.substring(0, str.length - 1)}${this.game.results.length > 0 ? ' ' + this.game.results : ``}`;
-            if (this.game.isRoundInProgress) {
-                this.game.startTurn();
-            } else if (this.game.isInProgress) {
-                str += `\n\nPlease use the !startround command when all players are ready for the next round.`;
-                return str;
-            } else {
-                str += `\n\nPlease use the !startgame command when all players are ready for a new game.`;
-                return str;
+                if (this.game.containsAllBots()) {
+                    str += `The game is over. The game consists of bots only; please use the !start command to start the next game.`;
+                } else {
+                    str += `The game is over, thanks for playing! Use !ready to ready up for the next game. Game begins when all approved players are ready.`;
+                }
             }
         }
+        if (messageRoom) {
+            this.msgRoom(str, this.channel);
+        } else {
+            return str;
+        }
+    }
+
+    promptCurrentPlayer = (messageRoom=false) => {
+        let str = `${this.game.results}`;
         let player = this.game.currentPlayer;
+        let name = player.getName();
+        str = `${str}${str.length > 0 ? ' ' : ''}It is ${name}'s turn to play. `;
         if (!player.isBot) {
             if (this.game.draw4LastTurn) {
                 return str;
             }
             let channel = this.fChatClient.channels.get(this.channel).channelTitle;
-            let name = player.getName();
-            str = `${str}${str.length > 0 ? ' ' : ''}It is ${name}'s turn to play. PM'ing them with their hand... `;
+            str += `PM'ing them with their hand... `;
             let privateString = this.getTurnOutput(player);
             if (this.game.canPlayerPlay() === false) {
                 privateString += `You currently have no playable cards.`;
@@ -140,20 +123,70 @@ class OhNoHelper {
             } else {
                 privateString += `Playable cards are listed in [b]bold[/b]. To play a card, enter this command in ${channel}: !play cardname [wildcolor] [shout]\n`;
                 privateString += `See the "How to Play" and "Commands for playing" sections on my profile for more information.`;
-                // privateString += `Parameters in [square brackets] are optional. Only include a wildcolor if you're playing a wild card, and only shout if you will have 1 card left in your hand after playing.\n\n`;
-                // privateString += `Examples: !play blonde bunny, !play brown reverse, !play wild breed 4 white, !play black cat shout\n\n`;
-                // privateString += `When playing your next to last card, don't forget to include "shout" at the end of the !play command. If you forget, you can use the !shout command after the fact, but make sure to do it before someone calls you out, or you will have to draw 2 cards! If the next player takes their turn before anyone calls you out, you're safe.\n`;
-                // privateString += `When playing a wild or wild breed 4 card, don't forget to include the color you want after the card name. If you don't want to play a card, you can use !draw to draw a card, or !pass to pass your turn if you've already drawn a card this turn.[/i]`;
             }
             this.msgUser(privateString, player.getName());
             return str;
-        }
-        if (this.game.isInProgress) {
-            str += `\n\nPlease use the !startround command when all players are ready for the next round.`;
         } else {
-            str += `\n\nPlease use the !startgame command when all players are ready for a new game.`;
+            if (this.game.draw4LastTurn) {
+                str += `Deciding whether to challenge or accept... `;
+                if (Math.floor(Math.random() * 100) % 4) {
+                    this.doBotTurn(() => {
+                        this.game.challengeDraw4();
+                        this.promptCurrentPlayer(true);
+                    });
+                } else {
+                    this.doBotTurn(() => {
+                        this.game.acceptDraw4();
+                        this.promptCurrentPlayer(true);
+                    });
+                }
+            } else {
+                let getPlay = () => {
+                    let play = {};
+                    if (Math.floor(Math.random() * 100) % 4) {
+                        play = {
+                            card: this.game.getHighestPlayableCard(),
+                            withShout: player.hand.length == 2 ? Math.floor(Math.random() * 100) % 4 !== 0 : false,
+                            wildColor: Math.floor(Math.random() * 100) % 4 === 0 ? DECKDATA.COLORS[Math.floor(Math.random() * DECKDATA.COLORS.length)] : player.getMostCommonColor()
+                        };
+                        console.log(`Going with a dangerous play!`);
+                    } else {
+                        play = this.game.getSafestPlay();
+                        console.log(`Going with a safe play.`);
+                    }
+                    return play;
+                }
+                let play = getPlay();
+                console.log(play);
+                if (!play.card || !this.game.isCardPlayable(play.card)) {
+                    this.game.pass();
+                    str += `${name} drew a card. `;
+                    if (!this.game.canPlayerPlay()) {
+                        this.doBotTurn(() => {
+                            this.game.pass();
+                            this.checkForVictory(true);
+                        });
+                        str += `${name} passed their turn. `;
+                    } else {
+                        play = getPlay();
+                        this.doBotTurn(() => {
+                            this.game.playCard(play.card, player, play.wildColor, play.withShout);
+                            this.checkForVictory(true);
+                        });
+                    }
+                } else {
+                    this.doBotTurn(() => {
+                        this.game.playCard(play.card, player, play.wildColor, play.withShout);
+                        this.checkForVictory(true);
+                    });
+                }
+            }
+            if (messageRoom) {
+                this.msgRoom(str, this.channel);
+            } else {
+                return str;
+            }
         }
-        return str;
     }
 };
 

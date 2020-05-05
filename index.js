@@ -50,11 +50,11 @@ myFchatBot.addErrorListener(data => {
     console.log(`-----`);
 });
 
-myFchatBot.addVariableListener(data => {
-    console.log(`Variable received:`);
-    console.log(data)
-    console.log(`-----`);
-});
+// myFchatBot.addVariableListener(data => {
+//     console.log(`Variable received:`);
+//     console.log(data)
+//     console.log(`-----`);
+// });
 
 // let names = ['Oney', 'Twoey', 'Threey', 'Fourey', 'Fivey', 'Sixy', 'Seveny', 'Eighty', 'Niney', 'Tenny'];
 // const numOfPlayers = 4;

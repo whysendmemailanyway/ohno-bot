@@ -25,6 +25,13 @@ const COLORS = [
     'BROWN'
 ];
 
+const COLOR_MAP = {
+    'blonde': 'yellow',
+    'black': 'purple',
+    'white': 'white',
+    'brown': 'brown'
+}
+
 const ACTION_RANKS = [RANK_SKIP, RANK_REVERSE, RANK_DRAW_2];
 
 const WILD_RANKS = [RANK_WILD, RANK_WILD_DRAW_4];
@@ -56,6 +63,8 @@ module.exports = {
     WILD_RANKS,
 
     COLORS,
+
+    COLOR_MAP,
 
     SCORE_MAP,
 

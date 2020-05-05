@@ -70,7 +70,8 @@ module.exports.default = class OhNoGame {
         this.config = {
             startingHandSize: 7,
             targetScore: 500,
-            maxPlayers: 10
+            maxPlayers: 10,
+            botTurnTime: 7
         }
     }
 
@@ -237,6 +238,8 @@ module.exports.default = class OhNoGame {
             return false;
         }
         if (!this.isInProgress) {
+            let player = this.allPlayers[index];
+            if (this.players.includes(player)) this.players.splice(this.players.indexOf(player), 1);
             this.allPlayers.splice(index, 1);
             console.log('Removed the player from index ' + index);
             return true;
@@ -495,7 +498,7 @@ module.exports.default = class OhNoGame {
                 return false;
             }
             player.removeFromHand(player.hand.indexOf(card));
-            messages.push(`${player.getName()} played [b]${card.getName()}[/b]${card.isWild() ? ' and set the new color to [b]' + (UTILS.titleCase(newWildColor) + '[/b]') : ''}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
+            messages.push(`${player.getName()} played [b]${card.getName(true)}[/b]${card.isWild() ? ` and set the new color to [b][color=purple][color=${DECKDATA.COLOR_MAP[newWildColor.toLowerCase()]}]` + (UTILS.titleCase(newWildColor) + '[/color][/color][/b]') : ''}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
             if (card.isWild() && newWildColor !== null) this.wildColor = UTILS.titleCase(newWildColor);
             if (player.hand.length === 0) {
                 let nextPlayer = this.updatePlayerIndex(true);
@@ -515,7 +518,7 @@ module.exports.default = class OhNoGame {
             }
             if (withShout) messages.push(this.shout(player));
         } else {
-            messages.push(`${this.currentDealer.getName()} dealt [b]${card.getName()}[/b] as the starting card.`);
+            messages.push(`${this.currentDealer.getName()} dealt [b]${card.getName(true)}[/b] as the starting card.`);
             while (card.rank === DECKDATA.RANK_WILD_DRAW_4) {
                 messages.push(`Whoops, can't start the game with ${DECKDATA.RANK_WILD_DRAW_4}! Reshuffling the deck and dealing a new starting card...`);
                 this.deck.addToTop(card);
@@ -677,6 +680,7 @@ module.exports.default = class OhNoGame {
         str += `\n`;
         str += `The game has ended, thanks for playing!`;
         this.isInProgress = false;
+        this.isRoundInProgress = false;
         console.log(str);
         this.results = str;
     }

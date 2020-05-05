@@ -47,10 +47,11 @@ class OhNo {
             ddbug: (args, data) => {
                 console.log(args, data);
                 if (!this.helper.isUserMaster(data)) return;
-                this.addbot(' Bot 1, Bot 2, Bot 3', data);
-                this.joingame(args, data);
+                this.addbot('Bot 1, Bot 2, Bot 3', data);
+                //this.joingame(args, data);
                 this.configuregame('startingHandSize=3, targetScore=50', data);
-                this.ready(args, data);
+                //this.ready(args, data);
+                this.start(args, data);
                 // if (this.game.isInProgress) {
                 //     this.game.endPrematurely();
                 // } else {
@@ -286,25 +287,7 @@ class OhNo {
                 } else {
                     let succeeded = this.game.playCard(play.card, player, play.wildColor, play.withShout);
                     if (succeeded) {
-                        if (this.game.isRoundInProgress) {
-                            this.game.startTurn();
-                            str = this.helper.promptCurrentPlayer();
-                        } else {
-                            str = `${this.game.results}\n\n`
-                            if (this.game.isInProgress) {
-                                if (this.game.containsAllBots()) {
-                                    str += `The round is over. The game consists of bots only; please use the !start command to start the next round.`;
-                                } else {
-                                    str += `The round is over. Use !ready to ready up for the next round. Round begins when all approved players are ready.`;
-                                }
-                            } else {
-                                if (this.game.containsAllBots()) {
-                                    str += `The game is over. The game consists of bots only; please use the !start command to start the next game.`;
-                                } else {
-                                    str += `The game is over, thanks for playing! Use !ready to ready up for the next game. Game begins when all approved players are ready.`;
-                                }
-                            }
-                        }
+                        str = this.helper.checkForVictory();
                     } else {
                         str = this.game.results;
                     }
@@ -355,7 +338,7 @@ class OhNo {
             str = `${player.getName()} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`;
             this.game.pass();
             this.game.startTurn();
-            str += this.helper.promptCurrentPlayer();
+            str += ' ' + this.helper.promptCurrentPlayer();
         }
         this.helper.msgRoom(str, data.channel);
     }
@@ -699,12 +682,12 @@ class OhNo {
             const playersToString = (players, withScore=false) => {
                 return players.map(player => player.getName() + (withScore ? ` (${player.score.getValue()} points)` : '')).join(', ');
             }
-            str += `${unapproved.length > 0 ? `Unapproved players: ${playersToString(unapproved)}` : `There are no unapproved players`}.`
+            str += `${unapproved.length > 0 ? `Unapproved players: ${playersToString(unapproved)}.` : `There are no unapproved players.`}`
             //str += `${approved.length > 0 ? ` Approved players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approved)}` : ``}`
-            str += `${approvedUnready.length > 0 ? ` Approved unready players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approvedUnready)}` : ``}.`
-            str += `${approvedReady.length > 0 ? ` Approved ready players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approvedReady)}` : ``}.`
-            str += `${ingameUnready.length > 0 ? ` Approved unready players (in active game): ${playersToString(ingameUnready, true)}` : ``}.`
-            str += `${ingameReady.length > 0 ? ` Approved ready players (in active game): ${playersToString(ingameReady, true)}` : ``}.`
+            str += `${approvedUnready.length > 0 ? ` Approved unready players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approvedUnready)}.` : `.`}`
+            str += `${approvedReady.length > 0 ? ` Approved ready players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approvedReady)}.` : `.`}`
+            str += `${ingameUnready.length > 0 ? ` Approved unready players (in active game): ${playersToString(ingameUnready, true)}.` : `.`}`
+            str += `${ingameReady.length > 0 ? ` Approved ready players (in active game): ${playersToString(ingameReady, true)}.` : `.`}`
             //if (this.game.isInProgress) str += ` ${ingame.length > 0 ? `Approved players in current game: ${playersToString(ingame, true)}` : `There are no players in the current game... somehow`}.`
             this.helper.msgRoom(str, data.channel);
         }

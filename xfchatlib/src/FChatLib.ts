@@ -379,7 +379,7 @@ export default class FChatLib implements IFChatLib{
         catch(err){}
 
         if(this.config.room !== undefined && this.channels.get(this.config.room) == null){
-            this.channels.set(this.config.room, {channelTitle: 'defaultTitle', pluginsList: [], channelName: 'defaultName'});
+            //this.channels.set(this.config.room, {channelTitle: 'defaultTitle', pluginsList: [], channelName: 'defaultName'});
             this.updateRoomsConfig();
         }
     }

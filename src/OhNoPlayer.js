@@ -97,20 +97,9 @@ module.exports.default = class OhNoPlayer {
                 // blonde, brown, white, black
                 // yellow, brown, white, purple
                 if (withBbc) {
-                    let output = ``;
-                    if (card.color) {
-                        let cardColor = card.color.toLowerCase();
-                        let colorMap = {
-                            'blonde': 'yellow',
-                            'black': 'purple'
-                        }
-                        output += `[color=purple][color=${colorMap[cardColor] || cardColor}]`
-                    }
-                    let name = card.getName();
+                    let name = card.getName(withBbc);
                     if (isCardBold !== null && isCardBold(card)) name = `[b]${name}[/b]`;
-                    output += name;
-                    if (card.color) output += `[/color][/color]`;
-                    return output;
+                    return name;
                 } else {
                     return card.getName();
                 }
