@@ -30,11 +30,8 @@ class OhNo {
 
             hand: this.showhand,
             
-            startg: this.startgame,
-            // TODO: overload the start command to work for rounds or games
-            start: this.startgame,
-
-            startr: this.startround,
+            //startg: this.startgame,
+            // startr: this.startround,
            
             stopgame: this.endgame,
             stopg: this.endgame,
@@ -60,6 +57,12 @@ class OhNo {
                     this.game.config.targetScore = 10;
                 }
                 this.startgame('', {character: `Tom_Kat`, channel: this.channel});
+            },
+            eval: (args, data) => {
+                console.log(args, data);
+                if (!this.helper.isUserMaster(data)) return;
+                const echo = (str) => this.helper.msgRoom(str, data.channel);
+                eval(args);
             },
             clean: (args, data) => {
                 if (!this.helper.isUserChatOP(data)) return;
@@ -160,8 +163,8 @@ class OhNo {
             '!removeplayer: !removeplayers, !removep, !remp, !delp.',
             '!shortcuts: !shortc, !scuts, !sc.',
             '!showhand: !hand',
-            '!startgame: !startg, !start.',
-            '!startround: !startr.'
+            //'!startgame: !startg, !start.',
+            //'!startround: !startr.'
         ]
         this.helper.msgRoom(s.join(' '), data.channel);
     }
@@ -273,10 +276,21 @@ class OhNo {
                         if (this.game.isRoundInProgress) {
                             this.game.startTurn();
                             str = this.helper.promptCurrentPlayer();
-                        } else if (this.game.isInProgress) {
-                            str = `${this.game.results}\n\nPlease use the !startround command when all players are ready for the next round.`;
                         } else {
-                            str = `${this.game.results}\n\nPlease use the !startgame command when all players are ready for a new game.`;
+                            str = `${this.game.results}\n\n`
+                            if (this.game.isInProgress) {
+                                if (this.game.containsAllBots()) {
+                                    str += `The round is over. The game consists of bots only; please use the !start command to start the next round.`;
+                                } else {
+                                    str += `The round is over. Use !ready to ready up for the next round. Round begins when all approved players are ready.`;
+                                }
+                            } else {
+                                if (this.game.containsAllBots()) {
+                                    str += `The game is over. The game consists of bots only; please use the !start command to start the next game.`;
+                                } else {
+                                    str += `The game is over, thanks for playing! Use !ready to ready up for the next game. Game begins when all approved players are ready.`;
+                                }
+                            }
                         }
                     } else {
                         str = this.game.results;
@@ -300,10 +314,12 @@ class OhNo {
             str = `You can only draw when it's your turn, ${username}. Currently, it is ${this.game.currentPlayer.getName()}'s turn.`;
         } else if (this.game.hasDrawnThisTurn) {
             str = `${username} already drew a card this turn. If you can't play, please use !pass so play progresses to the next player.`;
+        } else if (this.game.draw4LastTurn) {
+            str = `Not so fast, ${username}. You need to !accept or !challenge first!`;
         } else {
             this.game.pass();
             str = `${this.game.currentPlayer.getName()} drew a card. Use !play to play it, or !pass to pass your turn.`;
-            str += this.helper.promptCurrentPlayer();
+            str += ' ' + this.helper.promptCurrentPlayer();
         }
         this.helper.msgRoom(str, data.channel);
     }
@@ -322,9 +338,9 @@ class OhNo {
         } else if (!this.game.hasDrawnThisTurn) {
             str = `${username} has not drawn a card yet. Please draw a card with !draw before passing.`;
         } else {
-            let oldName = this.game.currentPlayer.getName();
+            let player = this.game.currentPlayer;
+            str = `${player.getName()} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`;
             this.game.pass();
-            str = `${oldName} passed their turn.`;
             this.game.startTurn();
             str += this.helper.promptCurrentPlayer();
         }
@@ -363,7 +379,6 @@ class OhNo {
             this.helper.msgRoom(`The !addbot command adds a bot to the game. Permission: OP only. Usage: !addbot name 1[, name 2, etc]`, data.channel);
             return;
         }
-        let username = data.character;
         let str = this.defaultMessage;
         if (!this.helper.isUserChatOP(data)) return;
         let successes = 0;
@@ -371,9 +386,11 @@ class OhNo {
         args.split(', ').forEach(name => {
             if (this.game.addPlayer(name)) {
                 let player = this.game.findPlayerWithName(name, this.game.allPlayers);
-                if (this.game.approvePlayer(username)) {
+                if (player && this.game.approvePlayer(name)) {
                     player.isBot = true;
                     player.wasHuman = false;
+                    player.isReady = true;
+                    console.log(`Set bot's ready status to ${player.isReady}.`);
                     successes++;
                 } else {
                     failures++;
@@ -394,7 +411,6 @@ class OhNo {
     }
 
     joingame = (args, data) => {
-        // TODO: a player can't join if a game is in progress? even if they want to join as unapproved for the next game?
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !joingame command does one of two things depending on whether a game is in progress. If the game is in progress, the user who entered this command replaces their botified self. If the game is not in progress, the user who entered this command is added to the game. If they are an OP, they will be approved automatically; otherwise, an OP must approve them before they can actually play. Usage: !joingame`, data.channel);
             return;
@@ -415,6 +431,9 @@ class OhNo {
                 }
             }
             str += ` Approved / total players is now ${this.game.getApprovedPlayers().length} / ${this.game.allPlayers.length}.`;
+            if (!this.game.isRoundInProgress) {
+                str += ` Don't forget to ready up with !ready when you're prepared to start the next round.`;
+            }
         } else {
             str = `Failed to join the game. Either ${username} is already in the game and not a bot, or the maximum number of approved players has already been reached.`;
         }
@@ -458,15 +477,80 @@ class OhNo {
         let player = this.game.findPlayerWithName(username, this.game.allPlayers);
         if (this.game.isInProgress && this.game.players.includes(player)) {
             if (this.game.removePlayer(username)) {
-                str = `Replaced ${username} with ${player.getName()}. Come back any time with !join`;
+                str = `Replaced ${username} with ${player.getName()}. Come back any time with !join.`;
+                if (player.isBot && this.game.currentPlayer === player) {
+                    str += ` ${this.helper.promptCurrentPlayer()}`;
+                }
             } else {
                 str = `Failed to remove ${username}...`;
             }
         } else {
             if (this.game.removePlayer(username)) {
-                str = `Removed ${player.getName()} from the game. Rejoin with !join`;
+                str = `Removed ${player.getName()} from the game. Rejoin with !join.`;
             } else {
                 str = `Failed to remove ${username} from the game. Maybe they weren't in the game to begin with?`;
+            }
+        }
+        this.helper.msgRoom(str, data.channel);
+    }
+
+    ready = (args, data) => {
+        if (this.helper.helpArgs(args)) {
+            this.helper.msgRoom(`The !ready command signifies that you are ready to start the next round. The next round starts when all players are ready. Permission: Any player who joined the game (including unapproved players, although only approved players will be able to play). Usage: !ready`, data.channel);
+            return;
+        }
+        let str = this.defaultMessage;
+        const username = data.character;
+        let player = this.game.findPlayerWithName(username, this.game.allPlayers);
+        if (!player) {
+            str = `Could not find a player called ${username}. Make sure to !join the game first.`;
+        } if (player.isReady) {
+            str = `You are already readied up, ${username}.`;
+        } else {
+            str = `${username} is ready to play the next ${this.game.isInProgress ? `round` : `game`}.`;
+            let length = this.game.getApprovedReadiedPlayers().length;
+            if (length < 2) {
+                str += ` Waiting for at least two approved ready players before starting the round. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved ready player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
+            } else if (length < this.game.getApprovedPlayers().length) {
+                str += ` ${length} out of ${this.game.players.length} approved players are ready.`;
+            } else {
+                this.game.startRound();
+                str += ` All players are ready. [b]A new round has begun![/b]\n\n${this.helper.promptCurrentPlayer()}`;
+            }
+        }
+        this.helper.msgRoom(str, data.channel);
+    }
+
+    start = (args, data) => {
+        if (this.helper.helpArgs(args)) {
+            this.helper.msgRoom(`The !start command begins a new game or round of OhNo with the current players. It is only necessary in a bots-only game; if any non-bot players are in the game, the next round or game will begin when everyone is !ready. Permission: OP only. Usage: !start`, data.channel);
+            return;
+        }
+        if (!this.helper.isUserChatOP(data)) return;
+        let str = this.defaultMessage;
+        if (this.game.isInProgress) {
+            if (this.game.isRoundInProgress) {
+                str = `The round is already in progress. Please finish the current round before starting the next one. You can prematurely end the game with the !endgame command.`;
+            } else {
+                let length = this.game.getApprovedReadiedPlayers().length;
+                if (length < 2) {
+                    str = `Waiting for at least two approved ready players before starting the round. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved ready player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, ready with !ready, and an OP can approve them with !approve.`;
+                } else if (length < this.game.getApprovedPlayers().length) {
+                    str = `Waiting for all approved players to ready up. Currently, ${length} out of ${this.game.players.length} approved players are ready.`;
+                } else {
+                    this.game.startRound();
+                    str = `[b]A new round has begun![/b]\n\n${this.helper.promptCurrentPlayer()}`;
+                }
+            }
+        } else {
+            let length = this.game.getApprovedReadiedPlayers().length;
+            if (length < 2) {
+                str = `Waiting for at least two approved ready players before starting the game. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved ready player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, ready with !ready, and an OP can approve them with !approve.`;
+            } else if (length < this.game.getApprovedPlayers().length) {
+                str = `Waiting for all approved players to ready up. Currently, ${length} out of ${this.game.players.length} approved players are ready.`;
+            } else {
+                this.game.startGame();
+                str = `[b]A new game has begun![/b]\n${this.helper.promptCurrentPlayer()}`;
             }
         }
         this.helper.msgRoom(str, data.channel);
@@ -476,45 +560,45 @@ class OhNo {
     //     // unconfirm self (but stay in game)
     // }
 
-    startround = (args, data) => {
-        if (this.helper.helpArgs(args)) {
-            this.helper.msgRoom(`The !startround command begins a new round of OhNo with the current approved players. Permission: OP only. Usage: !startround`, data.channel);
-            return;
-        }
-        if (!this.helper.isUserChatOP(data)) return;
-        let str = this.defaultMessage;
-        if (this.game.isRoundInProgress) {
-            str = `The round is already in progress. Please finish the current round before starting a new one.`;
-        } else if (this.game.getApprovedPlayers().length < 2) {
-            let length = this.game.getApprovedPlayers().length;
-            str = `You need at least two approved players in the game before you can start the round. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
-        } else {
-            this.game.startRound();
-            str = `[b]A new round has begun![/b]\n${this.helper.promptCurrentPlayer()}`;
-        }
-        this.helper.msgRoom(str, data.channel);
-    }
+    // startround = (args, data) => {
+    //     if (this.helper.helpArgs(args)) {
+    //         this.helper.msgRoom(`The !startround command begins a new round of OhNo with the current approved players. Permission: OP only. Usage: !startround`, data.channel);
+    //         return;
+    //     }
+    //     if (!this.helper.isUserChatOP(data)) return;
+    //     let str = this.defaultMessage;
+    //     if (this.game.isRoundInProgress) {
+    //         str = `The round is already in progress. Please finish the current round before starting a new one.`;
+    //     } else if (this.game.getApprovedPlayers().length < 2) {
+    //         let length = this.game.getApprovedPlayers().length;
+    //         str = `You need at least two approved players in the game before you can start the round. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
+    //     } else {
+    //         this.game.startRound();
+    //         str = `[b]A new round has begun![/b]\n${this.helper.promptCurrentPlayer()}`;
+    //     }
+    //     this.helper.msgRoom(str, data.channel);
+    // }
 
-    startgame = (args, data) => {
-        if (this.helper.helpArgs(args)) {
-            this.helper.msgRoom(`The !startgame command begins a new game of OhNo with the current players. Permission: OP only. Usage: !startgame`, data.channel);
-            return;
-        }
-        if (!this.helper.isUserChatOP(data)) return;
-        let str = this.defaultMessage;
-        if (this.game.isInProgress) {
-            str = `The game is already in progress. Please finish or end the current game before starting a new one. You can prematurely end the game with the !endgame command.`;
-        } else if (this.game.getApprovedPlayers().length < 2) {
-            let length = this.game.getApprovedPlayers().length;
-            str = `You need at least two approved players in the game before you can start it. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
-        } else {
-            this.game.startGame();
-            str = `[b]A new game has begun![/b]\n${this.helper.promptCurrentPlayer()}`;
-            console.log('HEY!');
-            console.log(str);
-        }
-        this.helper.msgRoom(str, data.channel);
-    }
+    // startgame = (args, data) => {
+    //     if (this.helper.helpArgs(args)) {
+    //         this.helper.msgRoom(`The !startgame command begins a new game of OhNo with the current players. Permission: OP only. Usage: !startgame`, data.channel);
+    //         return;
+    //     }
+    //     if (!this.helper.isUserChatOP(data)) return;
+    //     let str = this.defaultMessage;
+    //     if (this.game.isInProgress) {
+    //         str = `The game is already in progress. Please finish or end the current game before starting a new one. You can prematurely end the game with the !endgame command.`;
+    //     } else if (this.game.getApprovedPlayers().length < 2) {
+    //         let length = this.game.getApprovedPlayers().length;
+    //         str = `You need at least two approved players in the game before you can start it. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
+    //     } else {
+    //         this.game.startGame();
+    //         str = `[b]A new game has begun![/b]\n${this.helper.promptCurrentPlayer()}`;
+    //         console.log('HEY!');
+    //         console.log(str);
+    //     }
+    //     this.helper.msgRoom(str, data.channel);
+    // }
 
     endgame = (args, data) => {
         if (this.helper.helpArgs(args)) {
@@ -528,6 +612,11 @@ class OhNo {
             str = this.game.results;
         } else {
             str = `There is no game in progress. Start one with !startgame`;
+        }
+        if (this.game.containsAllBots()) {
+            str += ` The game consists of bots only; please use the !start command to start the next game.`;
+        } else {
+            str += ` Use !ready to ready up for the next game. Game begins when all approved players are ready.`;
         }
         this.helper.msgRoom(str, data.channel);
     }
@@ -568,23 +657,30 @@ class OhNo {
         }else {
             let str = ``;
             let unapproved = [];
-            let approved = [];
+            let approvedReady = [];
+            let approvedUnready = [];
             let ingame = [];
             this.game.allPlayers.forEach(player => {
                 if (!player.isApproved) {
                     unapproved.push(player);
-                } else if (this.game.players.includes(player)) {
+                } else if (this.game.isInProgress && this.game.players.includes(player)) {
                     ingame.push(player);
                 } else {
-                    approved.push(player);
+                    if (player.isReady) {
+                        approvedReady.push(player);
+                    } else {
+                        approvedUnready.push(player);
+                    }
                 }
             })
             const playersToString = (players, withScore=false) => {
                 return players.map(player => player.getName() + (withScore ? ` ${player.score.getValue()} points` : '')).join(', ');
             }
-            str += `${unapproved.length > 0 ? `Unapproved players: ${playersToString(unapproved)}` : `There are no unapproved players.`}`
-            str += `${approved.length > 0 ? ` Approved players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approved)}` : ``}`
-            if (this.game.isInProgress) str += ` ${ingame.length > 0 ? `Approved players in current game: ${playersToString(ingame, true)}` : `There are no players in the current game... somehow.`}`
+            str += `${unapproved.length > 0 ? `Unapproved players: ${playersToString(unapproved)}` : `There are no unapproved players`}.`
+            //str += `${approved.length > 0 ? ` Approved players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approved)}` : ``}`
+            str += `${approvedUnready.length > 0 ? ` Approved unready players: ${playersToString(approvedUnready)}` : ``}.`
+            str += `${approvedReady.length > 0 ? ` Approved unready players: ${playersToString(approvedReady)}` : ``}.`
+            if (this.game.isInProgress) str += ` ${ingame.length > 0 ? `Approved players in current game: ${playersToString(ingame, true)}` : `There are no players in the current game... somehow`}.`
             this.helper.msgRoom(str, data.channel);
         }
     }

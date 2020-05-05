@@ -44,7 +44,7 @@ class FChatLib {
         this.commandHandlers = [];
         //channels:Map<string, Array<IPlugin>> = new Map<string, Array<IPlugin>>();
         this.channels = new Map();
-        this.floodLimit = 2.0;
+        this.floodLimit = 1.0;
         // lastTimeCommandReceived:number = Number.MAX_VALUE;
         this.lastTimeCommandReceived = 0;
         this.commandsInQueue = 0;
@@ -79,6 +79,16 @@ class FChatLib {
         let id = this.connectionListeners.indexOf(fn);
         if (id != -1) {
             this.connectionListeners.splice(id, 1);
+        }
+    }
+    addErrorListener(fn) {
+        this.removeErrorListener(fn);
+        this.errorListeners.push(fn);
+    }
+    removeErrorListener(fn) {
+        let id = this.errorListeners.indexOf(fn);
+        if (id != -1) {
+            this.errorListeners.splice(id, 1);
         }
     }
     addJoinListener(fn) {
@@ -271,29 +281,30 @@ class FChatLib {
             if (!this.commandQueues[queueKey])
                 this.commandQueues[queueKey] = { commands: [], lastReceived: new Date('January 1, 2000 00:00:00') };
             let q = this.commandQueues[queueKey];
-            q.lastReceived = Date.now();
-            let timeToWait = q.commands.length * this.floodLimit;
+            let timeToWait = q.commands.length * this.floodLimit * 1000;
             for (let i = 0; i < q.commands.length; i++) {
                 timeToWait += q.commands[i].timeToWait;
             }
             let timeSinceLastCommand = (Date.now() - q.lastReceived);
-            if (timeSinceLastCommand < this.floodLimit) {
+            if (timeSinceLastCommand < this.floodLimit * 1000) {
                 timeToWait += (this.floodLimit * 1000) - timeSinceLastCommand;
             }
             let command = { messageType, content, timeToWait };
             q.commands.push(command);
             console.log(`Time since last command for ${queueKey}: ${timeSinceLastCommand}`);
             if (timeToWait > 0) {
-                console.log(`Waiting approximately ${timeToWait / 1000} seconds...`);
+                console.log(`Waiting approximately ${command.timeToWait / 1000} seconds...`);
                 while (command.timeToWait > 0 || q.commands.indexOf(command) !== 0) {
+                    let awaitTime = command.timeToWait <= 0 ? 500 : command.timeToWait;
                     //console.log(`Time to wait: ${timeToWait}`);
-                    yield this.timeout(1000);
-                    command.timeToWait -= 1000;
-                    console.log(`Waited a second. Remaining time to wait (s): ${command.timeToWait / 1000}. Command index: ${q.commands.indexOf(command)}`);
+                    yield this.timeout(awaitTime);
+                    command.timeToWait -= awaitTime;
+                    console.log(`Waited ${awaitTime / 1000} s. Remaining time to wait: ${command.timeToWait / 1000} s. Command index: ${q.commands.indexOf(command)}`);
                 }
             }
-            console.log(`Sending WS at ${Date.now()}`);
-            console.log(content);
+            q.lastReceived = Date.now();
+            //console.log(`Sending WS at ${Date.now()}`);
+            //console.log(content);
             this.sendWS(messageType, content);
             q.commands.splice(q.commands.indexOf(command), 1);
         });
@@ -450,7 +461,11 @@ class FChatLib {
     }
     sendWS(command, object) {
         if (this.ws.readyState) {
-            this.ws.send(command + ' ' + JSON.stringify(object));
+            let data = command + ' ' + JSON.stringify(object);
+            console.log(`Message Sent:`);
+            console.log(data);
+            console.log(`-----`);
+            this.ws.send(data);
             return true;
         }
         return false;
@@ -582,6 +597,11 @@ class FChatLib {
                     case "COR": //COR { "channel": string, "character": string }
                         for (let i = 0; i < this.chatOPRemovedListeners.length; i++) {
                             this.chatOPRemovedListeners[i].call(this, argument);
+                        }
+                        break;
+                    case "ERR": //ERR { "number": int, "message": string }
+                        for (let i = 0; i < this.errorListeners.length; i++) {
+                            this.errorListeners[i].call(this, argument);
                         }
                         break;
                     case "FLN": //FLN {"character":"The Kid"}

@@ -10,6 +10,7 @@ module.exports.default = class OhNoPlayer {
         this.score;
         this.isBot = false;
         this.isApproved = false;
+        this.isReady = false;
         this.alias;
         this.wasHuman = true;
         this.resetForGame();
@@ -88,7 +89,7 @@ module.exports.default = class OhNoPlayer {
         this.hand.splice(index, 1);
     }
 
-    handToString(withBbc = false, isCardPlayable = null) {
+    handToString(withBbc = false, isCardBold = null) {
         let results = this.hand.map(card => {
             if (card) {
                 // blonde, brown, white, black
@@ -104,7 +105,7 @@ module.exports.default = class OhNoPlayer {
                         output += `[color=purple][color=${colorMap[cardColor] || cardColor}]`
                     }
                     let name = card.getName();
-                    if (isCardPlayable !== null && isCardPlayable(card)) name = `[b]${name}[/b]`;
+                    if (isCardBold !== null && isCardBold(card)) name = `[b]${name}[/b]`;
                     output += name;
                     if (card.color) output += `[/color][/color]`;
                     return output;

@@ -32,6 +32,7 @@ class OhNoHelper {
     }
 
     msgRoom(text, channel) {
+        // TODO: Make this divide the posts nicer -- never split BBCode or words (especially usernames; look for periods, commas, etc).
         let msgLength = 3000;
         while (text.length > 0) {
             let newText = text;
@@ -65,14 +66,11 @@ class OhNoHelper {
     }
 
     promptCurrentPlayer() {
-        // TODO: handle bots playing to completion
-        // is this even fair? technically, I should handle each bot's
-        // turn separately so that players have a chance to !shout...
-        let str = `${this.game.results} `;
+        let str = `${this.game.results}`;
         while (this.game.currentPlayer.isBot && this.game.isRoundInProgress) {
             let player = this.game.currentPlayer;
             let name = this.game.currentPlayer.getName();
-            str += `It is ${name}'s turn. `;
+            str += `${str.length > 0 ? ' ' : ''}It is ${name}'s turn. `;
             if (this.game.draw4LastTurn) {
                 if (Math.random() * 100 % 4 === 0) {
                     this.game.challengeDraw4();
@@ -88,7 +86,7 @@ class OhNoHelper {
                     play = {
                         card: this.game.getHighestPlayableCard(),
                         withShout: Math.random() * 100 % 4 !== 0,
-                        wildColor: DECKDATA.COLORS[Math.floor(Math.random() * DECKDATA.COLORS.length)]
+                        wildColor: DECKDATA.COLORS[Math.random() * 100 % 4 === 0 ? Math.floor(Math.random() * DECKDATA.COLORS.length) : player.getMostCommonColor()]
                     };
                     console.log(`Going with a dangerous play!`);
                 } else {
@@ -112,7 +110,7 @@ class OhNoHelper {
             } else {
                 this.game.playCard(play.card, player, play.wildColor, play.withShout);
             }
-            str += this.game.results + ` `;
+            str = `${str.substring(0, str.length - 1)}${this.game.results.length > 0 ? ' ' + this.game.results : ``}`;
             if (this.game.isRoundInProgress) {
                 this.game.startTurn();
             } else if (this.game.isInProgress) {
@@ -126,11 +124,11 @@ class OhNoHelper {
         let player = this.game.currentPlayer;
         if (!player.isBot) {
             if (this.game.draw4LastTurn) {
-                return `${str.substring(0, str.length - 1)}`;
+                return str;
             }
             let channel = this.fChatClient.channels.get(this.channel).channelTitle;
             let name = player.getName();
-            str = `${str}It is ${name}'s turn to play. PM'ing them with their hand... `;
+            str = `${str}${str.length > 0 ? ' ' : ''}It is ${name}'s turn to play. PM'ing them with their hand... `;
             let privateString = this.getTurnOutput(player);
             if (this.game.canPlayerPlay() === false) {
                 privateString += `You currently have no playable cards.`;
@@ -148,14 +146,14 @@ class OhNoHelper {
                 // privateString += `When playing a wild or wild breed 4 card, don't forget to include the color you want after the card name. If you don't want to play a card, you can use !draw to draw a card, or !pass to pass your turn if you've already drawn a card this turn.[/i]`;
             }
             this.msgUser(privateString, player.getName());
-            return `${str.substring(0, str.length - 1)}`;
+            return str;
         }
         if (this.game.isInProgress) {
             str += `\n\nPlease use the !startround command when all players are ready for the next round.`;
         } else {
             str += `\n\nPlease use the !startgame command when all players are ready for a new game.`;
         }
-        return `${str.substring(0, str.length - 1)}`;
+        return str;
     }
 };
 

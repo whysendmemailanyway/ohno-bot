@@ -45,6 +45,7 @@ export interface IFChatLib {
     config:IConfig;
 
     banListeners:any;
+    errorListeners:any;
     chatOPAddedListeners:any;
     chatOPListListeners:any;
     chatOPRemovedListeners:any;

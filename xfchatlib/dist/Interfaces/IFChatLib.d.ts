@@ -40,6 +40,7 @@ export interface IFChatLib {
     removeVariableListener(fn: any): void;
     config: IConfig;
     banListeners: any;
+    errorListeners: any;
     chatOPAddedListeners: any;
     chatOPListListeners: any;
     chatOPRemovedListeners: any;

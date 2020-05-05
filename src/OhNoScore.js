@@ -18,7 +18,8 @@ class OhNoScore {
         keys.sort((a, b) => DECKDATA.SCORE_MAP[a] - DECKDATA.SCORE_MAP[b]);
         let entries = [];
         keys.forEach(key => {
-            entries.push(`${this[key]}x ${UTILS.titleCase(key)}`);
+            let points = DECKDATA.SCORE_MAP[key];
+            entries.push(`${this[key]}x ${UTILS.titleCase(key)} (${points} point${points === 1 ? `` : `s`})`);
         });
         return `${this.getValue()} points${entries.length > 0 ? `: ${entries.join(', ')}` : ``}.`;
     }

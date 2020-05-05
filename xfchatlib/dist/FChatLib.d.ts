@@ -5,6 +5,8 @@ import { IChannel } from "./Interfaces/IChannel";
 export default class FChatLib implements IFChatLib {
     addConnectionListener(fn: Function): void;
     removeConnectionListener(fn: any): void;
+    addErrorListener(fn: Function): void;
+    removeErrorListener(fn: any): void;
     addJoinListener(fn: any): void;
     removeJoinListener(fn: any): void;
     addLeaveListener(fn: any): void;

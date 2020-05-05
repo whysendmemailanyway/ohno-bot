@@ -44,7 +44,8 @@ const makeMatcher = () => {
     let colors = [...DECKDATA.COLORS, 'BLOND'].join('|');
     let ranks = [...DECKDATA.NUMBER_RANKS, ...DECKDATA.ACTION_RANKS].join('|');
     let wildRanks = DECKDATA.WILD_RANKS.join('|');
-    return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:WILD(?: BREED 4)*))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>!*SHOUT)*)`, `gi`);
+    //return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:WILD(?: BREED 4)*))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>!*SHOUT)*)`, `gi`);
+    return new RegExp(`(?<cardname>(?:BLACK|WHITE|BLONDE*|BROWN) (?:MOUSE|BIRD|BUNNY|RABBIT|LAPINE|BASS|FISH|CAT|FELINE|DOG|CANINE|SHEEP|DEER|PIG|COW|SKIP|REVERSE|BREED 2)|(?:WILD(?: BREED 4))|(?:caitlyn greyiers|daniel greyiers|greyiers|ellen strand|caitlyn|daniel|ellen|strand|danae|nipperkin)*)(?: *(?<wildcolor>BLACK|WHITE|BLONDE*|BROWN)*)(?: *(?<shout>!*SHOUT)*)`, `gi`);
 }
 
 module.exports.default = class OhNoGame {
@@ -80,11 +81,40 @@ module.exports.default = class OhNoGame {
             return match;
         }
         let response = {};
+        let friendsMap = {
+            'caitlyn': 'white bunny',
+            'daniel': 'white bunny',
+            'daniel greyiers': 'white bunny',
+            'caitlyn greyiers': 'white bunny',
+            'greyiers': 'white bunny',
+            'ellen': 'brown bunny',
+            'ellen strand': 'brown bunny',
+            'ellen strand': 'brown bunny',
+            'danae': 'blonde dog',
+            'nipperkin': 'white mouse',
+        }
+        let friendKeys = Object.keys(friendsMap);
         for (let group in match.groups) {
             let value = match.groups[group];
             if (group === 'cardname') {
-                let words = value.split(' ');
-                if (words.length > 1 && words[0].toLowerCase() === 'blond') value = `blonde ${words.slice(1).join(' ')}`;
+                if(friendKeys.includes(value.toLowerCase())) {
+                    value = friendsMap[value.toLowerCase()];
+                } else {
+                    let words = value.split(' ');
+                    if (words.length > 1) {
+                        switch (words[0].toLowerCase()) {
+                            case 'blond': words[0] = 'blonde'; break;
+                        }
+                        switch (words[1].toLowerCase()) {
+                            case 'rat': words[1] = 'mouse'; break;
+                            case 'fish': words[1] = 'bass'; break;
+                            case 'lapine': case 'rabbit': words[1] = 'bunny'; break;
+                            case 'feline': words[1] = 'cat'; break;
+                            case 'canine': words[1] = 'dog'; break;
+                        }
+                        value = words.join(' ');
+                    }
+                }
             } else if (group === 'wildcolor' && value !== undefined && value.toLowerCase() === 'blond') {
                 value = 'blonde';
             } else if (group === 'shout' && value !== undefined && value.toLowerCase() === '!shout') value = 'shout';
@@ -117,6 +147,17 @@ module.exports.default = class OhNoGame {
         return this.allPlayers.filter(player => player.isApproved);
     }
 
+    getApprovedReadiedPlayers() {
+        return this.allPlayers.filter(player => player.isApproved && player.isReady);
+    }
+
+    containsAllBots() {
+        for (let i = 0; i < this.players.length; i++) {
+            if (this.players[i].isBot) return false;
+        }
+        return true;
+    }
+
     approvePlayer(nameOrIndex) {
         let player = this.findPlayerWithName(nameOrIndex, this.allPlayers);
         if (!player) player = this.allPlayers[nameOrIndex];
@@ -144,26 +185,24 @@ module.exports.default = class OhNoGame {
         }
         for (let i = 0; i < this.allPlayers.length; i++) {
             let player = this.allPlayers[i];
-            if (this.isInProgress) {
-                if (player.isBot) {
-                    if (player.wasHuman) {
-                        player.isBot = false;
-                        console.log(`Unbotted ${player.getName()}.`);
-                        return true;
-                    } else {
-                        console.log(`Player is already in the game and was always a bot`);
-                        return false;
-                    }
+            if (player.name !== name) continue;
+            if (player.isBot) {
+                if (player.wasHuman) {
+                    player.isBot = false;
+                    player.isReady = false;
+                    console.log(`Unbotted ${player.getName()}.`);
+                    return true;
                 } else {
-                    console.log(`Player is already added and not a bot`);
+                    console.log(`Player is already in the game and was always a bot`);
                     return false;
                 }
-            } else if (player.name === name) {
+            } else {
                 console.log(`Unable to add new player ${name}, a player with that name is already in the game.`);
                 return false;
             }
         }
-        this.allPlayers.push(new OhNoPlayer(name));
+        let player = new OhNoPlayer(name);
+        this.allPlayers.push(player);
         return true;
     }
 
@@ -205,6 +244,7 @@ module.exports.default = class OhNoGame {
             if (this.players.includes(player)) {
                 if (!player.isBot) {
                     player.isBot = true;
+                    player.isReady = true;
                     console.log('Set player to bot at index ' + index);
                     return true;
                 }
@@ -331,20 +371,22 @@ module.exports.default = class OhNoGame {
     acceptDraw4() {
         let challengee = this.getPreviousPlayer();
         this.currentPlayer.addToHand(this.drawX(4));
-        this.results = `${this.currentPlayer.getName()} accepts ${challengee.getName()}'s ${this.discards.top().getName()}! They draw 4 cards and miss their turn. `;
+        this.results = `${this.currentPlayer.getName()} accepts ${challengee.getName()}'s ${this.discards.top().getName()}! They draw 4 cards and miss their turn.`;
         this.endTurn(true);
     }
 
     isDraw4Legal(player, oldCard) {
-        let canPlay = false;
+        let offendingCards = [];
         for (let i = 0; i < player.hand.length; i++) {
             let card = player.hand[i];
-            if (!card.isWild() && this.isCardPlayable(card, oldCard)) {
-                canPlay = true;
-                break;
+            if (card.isWild()) continue;
+            if (oldCard.isWild() && (this.wildColor === null || card.color.toLowerCase() === this.wildColor.toLowerCase())) {
+                offendingCards.push(card);
+            } else if (card.color === oldCard.color) {
+                offendingCards.push(card);
             }
         }
-        return canPlay;
+        return offendingCards;
     }
 
     challengeDraw4() {
@@ -357,9 +399,10 @@ module.exports.default = class OhNoGame {
             }
             let challengee = this.getPreviousPlayer();
             messages.push(`${this.currentPlayer.getName()} challenges ${challengee.getName()}'s ${this.discards.top().getName()}!`);
-            messages.push(`\n${challengee.getName()} has the following cards in hand: ${challengee.handToString()}\n`);
             let oldCard = this.discards.top(2)[1];
-            let canPlay = this.isDraw4Legal(challengee, oldCard);
+            let offendingCards = this.isDraw4Legal(challengee, oldCard);
+            messages.push(`\n${challengee.getName()} reveals their hand: ${challengee.handToString(true, card => offendingCards.includes(card))}\n`);
+            let canPlay = offendingCards.length > 0;
             if (canPlay) {
                 messages.push(`${challengee.getName()} played their ${d4name} illegally and now draws 4 cards!`);
                 challengee.addToHand(this.drawX(4));
@@ -396,13 +439,7 @@ module.exports.default = class OhNoGame {
     }
 
     getSafestPlay(player = this.currentPlayer) {
-        let safelyPlayDraw4 = true;
-        for (let i = 0; i < player.hand.filter(card => !card.isWild()).length; i++) {
-            if (this.isDraw4Legal(player, this.discards.top())) {
-                safelyPlayDraw4 = false;
-                break;
-            }
-        }
+        let safelyPlayDraw4 = this.isDraw4Legal(player, this.discards.top()).length === 0;
         let highestCard;
         for (let i = 0; i < player.hand.length; i++) {
             let card = player.hand[i];
@@ -548,9 +585,12 @@ module.exports.default = class OhNoGame {
         this.isRoundInProgress = false;
         let cards = [];
         let messages = [];
+        let otherPlayerScores = [];
         this.players.forEach(player => {
+            if (!player.isBot) player.isReady = false;
             if (player === this.currentPlayer) return;
             cards.push(...player.hand);
+            otherPlayerScores.push({name: player.getName(), total: player.score.getValue()});
         });
         let score = new OhNoScore(cards);
         this.currentPlayer.score.addScore(score);
@@ -558,9 +598,15 @@ module.exports.default = class OhNoGame {
         let totalScore = this.currentPlayer.score.getValue();
         messages.push(`This brings their total score to ${totalScore} points!`);
         if (this.checkForVictory()) return this.results;
+        if (otherPlayerScores.length > 0) {
+            otherPlayerScores.sort((a, b) => {
+                return (b.total - a.total);
+            });
+            messages.push(...otherPlayerScores.map(obj => `\n    ${obj.name} has ${obj.total} points.`));
+        }
         this.dealerIndex += 1;
         if (this.dealerIndex >= this.players.length) this.dealerIndex = 0;
-        messages.push(`It is now ${this.players[this.dealerIndex].getName()}'s turn to deal.`);
+        messages.push(`\nIt is now ${this.players[this.dealerIndex].getName()}'s turn to deal.`);
         this.setResultsWithArray(messages);
         return this.results;
     }
@@ -616,6 +662,7 @@ module.exports.default = class OhNoGame {
         
         let otherPlayerScores = [];
         this.players.forEach(player => {
+            if (!player.isBot) player.isReady = false;
             if (winners.includes(player)) return;
             otherPlayerScores.push({name: player.getName(), total: player.score.getValue()});
         });
