@@ -19,7 +19,7 @@ class OhNoCard {
             // TODO: wild color
             // [color=purple]W[/color][color=purple]I[/color][color=purple]L[/color][color=purple]D[/color]
             // [color=purple][color=white]X[/color][/color][color=purple][color=yellow]X[/color][/color][color=purple][color=brown]X[/color][/color][color=purple][color=purple]X[/color][/color]
-            return UTILS.titleCase(this.name).split('').map((char, i) => `[color=purple][color=${colors[i % colors.length]}]${char}[/color][/color]`);
+            return UTILS.titleCase(this.name).split('').map((char, i) => `[color=purple][color=${colors[i % colors.length]}]${char}[/color][/color]`).join('');
         }
     }
 
