@@ -374,8 +374,8 @@ module.exports.default = class OhNoGame {
 
     acceptDraw4() {
         let challengee = this.getPreviousPlayer();
-        this.currentPlayer.addToHand(this.drawX(4));
         this.results = `${this.currentPlayer.getName()} accepts ${challengee.getName()}'s ${this.discards.top().getName()}! They draw 4 cards and miss their turn.`;
+        this.currentPlayer.addToHand(this.drawX(4));
         this.endTurn(true);
     }
 

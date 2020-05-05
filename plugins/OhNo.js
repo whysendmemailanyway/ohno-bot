@@ -32,6 +32,7 @@ class OhNo {
             
             //startg: this.startgame,
             // startr: this.startround,
+            s: this.shout,
            
             stopgame: this.endgame,
             stopg: this.endgame,
@@ -47,11 +48,12 @@ class OhNo {
             ddbug: (args, data) => {
                 console.log(args, data);
                 if (!this.helper.isUserMaster(data)) return;
-                this.addbot('Bot 1, Bot 2, Bot 3', data);
-                //this.joingame(args, data);
-                this.configuregame('startingHandSize=3, targetScore=50', data);
-                //this.ready(args, data);
-                this.start(args, data);
+                this.addbot('Abbot', data);
+                this.joingame(args, data);
+                this.addbot('Costello', data);
+                this.configuregame('startingHandSize=3, targetScore=100', data);
+                this.ready(args, data);
+                //this.start(args, data);
                 // if (this.game.isInProgress) {
                 //     this.game.endPrematurely();
                 // } else {
@@ -66,7 +68,10 @@ class OhNo {
             eval: (args, data) => {
                 console.log(args, data);
                 if (!this.helper.isUserMaster(data)) return;
-                const echo = (str) => this.helper.msgRoom(str, data.channel);
+                const echo = (str) => {
+                    console.log(str);
+                    this.helper.msgRoom(str, data.channel);
+                }
                 eval(args);
             },
             // floodtest: (args, data) => {
@@ -175,6 +180,7 @@ class OhNo {
             '!leavegame: !leaveg, !leave.',
             '!listplayers: !listp.',
             '!removeplayer: !removeplayers, !removep, !remp, !delp.',
+            '!shout: !s.',
             '!shortcuts: !shortc, !scuts, !sc.',
             '!showhand: !hand',
             //'!startgame: !startg, !start.',
@@ -214,6 +220,7 @@ class OhNo {
             str = `You can't accept, ${player.getName()}, it is not your turn.`;
         } else {
             this.game.acceptDraw4();
+            // start turn?
             str = this.helper.promptCurrentPlayer();
         }
         this.helper.msgRoom(str, data.channel);
@@ -287,6 +294,7 @@ class OhNo {
                 } else {
                     let succeeded = this.game.playCard(play.card, player, play.wildColor, play.withShout);
                     if (succeeded) {
+                        if (player.hand.length === 1) this.helper.checkForShouts();
                         str = this.helper.checkForVictory();
                     } else {
                         str = this.game.results;

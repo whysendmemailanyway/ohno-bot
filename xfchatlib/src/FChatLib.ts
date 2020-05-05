@@ -309,7 +309,7 @@ export default class FChatLib implements IFChatLib{
     }
 
     async sendCommandWhenReady() {
-        console.log(`Received new command, ${this.commands.length} total commands.`);
+        //console.log(`Received new command, ${this.commands.length} total commands.`);
         let timeToWait = (this.commands.length - 1) * this.floodLimit * 1000;
         let timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
         if (timeSinceLastCommand < this.floodLimit * 1000) timeToWait += (this.floodLimit * 1000 - timeSinceLastCommand);

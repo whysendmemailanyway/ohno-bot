@@ -1,4 +1,5 @@
 const DECKDATA = require('./OhNoDeckData');
+const UTILS = require('./OhNoUtils');
 
 class OhNoHelper {
     constructor (fChatClient, game, channel) {
@@ -70,7 +71,28 @@ class OhNoHelper {
         setTimeout(() => {
             if (!this.game.isRoundInProgress) return;
             callback();
-        }, this.game.botTurnTime * 1000);
+        }, this.game.config.botTurnTime * 1000);
+    }
+
+    checkForShouts = () => {
+        let playerInDanger = null;
+        for (let i = 0; i < this.game.players.length; i++) {
+            if (this.game.players[i].isInShoutDanger) {
+                playerInDanger = this.game.players[i];
+                break;
+            }
+        }
+        if (playerInDanger) {
+            let bots = this.game.players.filter(player => player.isBot);
+            for (let i = 0; i < bots.length; i++) {
+                if (Math.floor(Math.random() * 100) % 4 === 0) {
+                    setTimeout(() => {
+                        if (!this.game.isRoundInProgress) return;
+                        this.msgRoom(this.game.shout(playerInDanger), this.channel);
+                    }, Math.random() * this.botTurnTime * 1000);
+                }
+            }
+        }
     }
 
     checkForVictory = (messageRoom=false) => {
@@ -78,6 +100,7 @@ class OhNoHelper {
         if (this.game.isRoundInProgress) {
             this.game.startTurn();
             str = this.promptCurrentPlayer();
+            this.checkForShouts();
         } else {
             str = `${this.game.results}\n\n`
             if (this.game.isInProgress) {
@@ -111,7 +134,6 @@ class OhNoHelper {
                 return str;
             }
             let channel = this.fChatClient.channels.get(this.channel).channelTitle;
-            str += `PM'ing them with their hand... `;
             let privateString = this.getTurnOutput(player);
             if (this.game.canPlayerPlay() === false) {
                 privateString += `You currently have no playable cards.`;
@@ -124,26 +146,29 @@ class OhNoHelper {
                 privateString += `Playable cards are listed in [b]bold[/b]. To play a card, enter this command in ${channel}: !play cardname [wildcolor] [shout]\n`;
                 privateString += `See the "How to Play" and "Commands for playing" sections on my profile for more information.`;
             }
-            this.msgUser(privateString, player.getName());
+            str += `PM'ing them with their hand... `;
+            setTimeout(() => {
+                this.msgUser(privateString, player.getName());
+            }, this.fChatClient.floodLimit * 1000);
+            str = str.substring(0, str.length - 1);
             return str;
         } else {
             if (this.game.draw4LastTurn) {
-                str += `Deciding whether to challenge or accept... `;
-                if (Math.floor(Math.random() * 100) % 4) {
+                if (Math.floor(Math.random() * 100) % 4 === 0) {
                     this.doBotTurn(() => {
                         this.game.challengeDraw4();
-                        this.promptCurrentPlayer(true);
+                        this.checkForVictory(true);
                     });
                 } else {
                     this.doBotTurn(() => {
                         this.game.acceptDraw4();
-                        this.promptCurrentPlayer(true);
+                        this.checkForVictory(true);
                     });
                 }
             } else {
                 let getPlay = () => {
                     let play = {};
-                    if (Math.floor(Math.random() * 100) % 4) {
+                    if (Math.floor(Math.random() * 100) % 4 === 0) {
                         play = {
                             card: this.game.getHighestPlayableCard(),
                             withShout: player.hand.length == 2 ? Math.floor(Math.random() * 100) % 4 !== 0 : false,
@@ -159,20 +184,21 @@ class OhNoHelper {
                 let play = getPlay();
                 console.log(play);
                 if (!play.card || !this.game.isCardPlayable(play.card)) {
-                    this.game.pass();
-                    str += `${name} drew a card. `;
-                    if (!this.game.canPlayerPlay()) {
+                    if (!this.game.hasDrawnThisTurn) {
                         this.doBotTurn(() => {
                             this.game.pass();
-                            this.checkForVictory(true);
+                            this.msgRoom(`${name} drew a card.`, this.channel);
+                            this.promptCurrentPlayer(true);
                         });
-                        str += `${name} passed their turn. `;
                     } else {
-                        play = getPlay();
-                        this.doBotTurn(() => {
-                            this.game.playCard(play.card, player, play.wildColor, play.withShout);
-                            this.checkForVictory(true);
-                        });
+                        if (!this.game.canPlayerPlay()) {
+                            this.doBotTurn(() => {
+                                this.game.pass();
+                                this.msgRoom(`${name} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`, this.channel);
+                                this.checkForVictory(true);
+                            });
+                            //str += `${name} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`;
+                        }
                     }
                 } else {
                     this.doBotTurn(() => {
@@ -181,6 +207,7 @@ class OhNoHelper {
                     });
                 }
             }
+            str = str.substring(0, str.length - 1);
             if (messageRoom) {
                 this.msgRoom(str, this.channel);
             } else {
