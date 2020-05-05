@@ -7,12 +7,12 @@ class OhNoHelper {
         this.channel = channel;
     }
 
-    msgUser(text, username) {
+    msgUser = (text, username) => {
         // TODO: if any output exceeds the character limit, break it into multiple posts separated by 1 second each.
         this.fChatClient.sendPrivMessage(text, username);
     }
 
-    isUserMaster(data) {
+    isUserMaster = (data) => {
         if(data.character == this.fChatClient.config.master){
             return true;
         }
@@ -22,7 +22,7 @@ class OhNoHelper {
         }
     }
     
-    isUserChatOP(data) {
+    isUserChatOP = (data) => {
         if(this.fChatClient.isUserChatOP(data.character, data.channel)){
             return true;
         } else {
@@ -31,7 +31,7 @@ class OhNoHelper {
         }
     }
 
-    msgRoom(text, channel) {
+    msgRoom = (text, channel) => {
         // TODO: Make this divide the posts nicer -- never split BBCode or words (especially usernames; look for periods, commas, etc).
         let msgLength = 3000;
         while (text.length > 0) {
@@ -46,33 +46,33 @@ class OhNoHelper {
         }
     }
 
-    isUserInChannel(username, channel) {
+    isUserInChannel = (username, channel) => {
         return this.fChatClient.getUserList(channel).includes(username);
     }
 
-    helpArgs(args) {
+    helpArgs = (args) => {
         return (args === '?' || args === 'help' || args === 'h');
     }
 
-    insufficientArgs(args) {
+    insufficientArgs = (args) => {
         return (!args || args.length === 0 || this.helpArgs(args));
     }
 
-    getTurnOutput(player) {
+    getTurnOutput = (player) => {
         let privateString = `[b]Current game: ${this.fChatClient.channels.get(this.channel).channelTitle}[/b]\n`;
         privateString += `The top discard is [b]${this.game.discards.top().getName()}[/b]${this.game.discards.top().isWild() ? `, the wild color is [b]${this.game.wildColor}[/b]` : ``}. Your hand:\n`;
         privateString += `    ${player.handToString(true, this.game.isCardPlayable)}\n\n`;
         return privateString;
     }
 
-    promptCurrentPlayer() {
+    promptCurrentPlayer = () => {
         let str = `${this.game.results}`;
         while (this.game.currentPlayer.isBot && this.game.isRoundInProgress) {
             let player = this.game.currentPlayer;
             let name = this.game.currentPlayer.getName();
-            str += `${str.length > 0 ? ' ' : ''}It is ${name}'s turn. `;
+            str += ` It is ${name}'s turn. `;
             if (this.game.draw4LastTurn) {
-                if (Math.random() * 100 % 4 === 0) {
+                if (Math.floor(Math.random() * 100) % 4) {
                     this.game.challengeDraw4();
                 } else {
                     this.game.acceptDraw4();
@@ -82,11 +82,11 @@ class OhNoHelper {
             }
             let getPlay = () => {
                 let play = {};
-                if (Math.random() * 100 % 4 === 0) {
+                if (Math.floor(Math.random() * 100) % 4) {
                     play = {
                         card: this.game.getHighestPlayableCard(),
-                        withShout: Math.random() * 100 % 4 !== 0,
-                        wildColor: DECKDATA.COLORS[Math.random() * 100 % 4 === 0 ? Math.floor(Math.random() * DECKDATA.COLORS.length) : player.getMostCommonColor()]
+                        withShout: player.hand.length == 2 ? Math.floor(Math.random() * 100) % 4 !== 0 : false,
+                        wildColor: Math.floor(Math.random() * 100) % 4 === 0 ? DECKDATA.COLORS[Math.floor(Math.random() * DECKDATA.COLORS.length)] : player.getMostCommonColor()
                     };
                     console.log(`Going with a dangerous play!`);
                 } else {
@@ -96,7 +96,7 @@ class OhNoHelper {
                 return play;
             }
             let play = getPlay();
-            
+            console.log(play);
             if (!play.card || !this.game.isCardPlayable(play.card)) {
                 this.game.pass();
                 str += `${name} drew a card. `;

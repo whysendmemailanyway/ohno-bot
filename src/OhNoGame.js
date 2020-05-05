@@ -45,7 +45,8 @@ const makeMatcher = () => {
     let ranks = [...DECKDATA.NUMBER_RANKS, ...DECKDATA.ACTION_RANKS].join('|');
     let wildRanks = DECKDATA.WILD_RANKS.join('|');
     //return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:WILD(?: BREED 4)*))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>!*SHOUT)*)`, `gi`);
-    return new RegExp(`(?<cardname>(?:BLACK|WHITE|BLONDE*|BROWN) (?:MOUSE|BIRD|BUNNY|RABBIT|LAPINE|BASS|FISH|CAT|FELINE|DOG|CANINE|SHEEP|DEER|PIG|COW|SKIP|REVERSE|BREED 2)|(?:WILD(?: BREED 4))|(?:caitlyn greyiers|daniel greyiers|greyiers|ellen strand|caitlyn|daniel|ellen|strand|danae|nipperkin)*)(?: *(?<wildcolor>BLACK|WHITE|BLONDE*|BROWN)*)(?: *(?<shout>!*SHOUT)*)`, `gi`);
+    const regstr = `(?<cardname>((?:BLACK|WHITE|BLONDE*|BROWN) (?:MOUSE|BIRD|BUNNY|BASS|CAT|DOG|SHEEP|DEER|PIG|COW|SKIP|REVERSE|BREED 2))|(?:WILD(?: BREED 4)*)|(?:caitlyn greyiers|daniel greyiers|greyiers|ellen strand|caitlyn|daniel|ellen|strand|danae|nipperkin))(?: (?<wildcolor>BLACK|WHITE|BLONDE*|BROWN))*(?: (?<shout>!*SHOUT))*`;
+    return new RegExp(regstr, `gi`);
 }
 
 module.exports.default = class OhNoGame {
@@ -295,7 +296,7 @@ module.exports.default = class OhNoGame {
         console.log(`The game is afoot! Have fun. :-)`);
         this.dealerIndex = 0;
         this.results = ``;
-        this.players = this.getApprovedPlayers();
+        this.players = this.getApprovedReadiedPlayers();
         this.players.forEach(player => player.resetForGame());
         this.isInProgress = true;
         this.startRound();
@@ -418,7 +419,6 @@ module.exports.default = class OhNoGame {
         return this.setResultsWithArray(messages);
     }
 
-    // TODO: implement bot shouting?
     shout(player) {
         let playerInDanger = null;
         for (let i = 0; i < this.players.length; i++) {

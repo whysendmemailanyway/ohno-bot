@@ -75,13 +75,15 @@ module.exports.default = class OhNoPlayer {
         let counts = {};
         DECKDATA.COLORS.forEach((color) => counts[color] = 0);
         for (let i = 0; i < this.hand.length; i++) {
-            if (this.hand.color) counts[this.hand.color]++;
+            if (this.hand[i].color) counts[this.hand[i].color]++;
         }
         let highestCount = DECKDATA.COLORS[0];
+        console.log(highestCount);
         for (let i = 1; i < Object.keys(counts).length; i++) {
             let key = Object.keys(counts)[i];
             if (counts[key] > counts[highestCount]) highestCount = key;
         }
+        // TODO: if there's a tie in count, return highest point value color
         return highestCount;
     }
 

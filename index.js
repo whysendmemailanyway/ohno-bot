@@ -38,11 +38,11 @@ myFchatBot.addPrivateMessageListener((data) => {
     myFchatBot.sendPrivMessage(`Hey friend! I don't currently support private messages, please use my commands in a channel where I am present. Maybe someday I'll be more robust. Thanks!`, data.character);
 });
 
-myFchatBot.addMessageListener(data => {
-    console.log(`Message received:`);
-    console.log(data)
-    console.log(`-----`);
-});
+// myFchatBot.addMessageListener(data => {
+//     console.log(`Message received:`);
+//     console.log(data)
+//     console.log(`-----`);
+// });
 
 myFchatBot.addErrorListener(data => {
     console.log(`Error received:`);

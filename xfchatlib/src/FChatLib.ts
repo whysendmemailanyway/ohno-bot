@@ -545,9 +545,9 @@ export default class FChatLib implements IFChatLib{
     sendWS(command, object) {
         if (this.ws.readyState) {
             let data = command + ' ' + JSON.stringify(object);
-            console.log(`Message Sent:`);
-            console.log(data)
-            console.log(`-----`);
+            // console.log(`Message Sent:`);
+            // console.log(data)
+            // console.log(`-----`);
             this.ws.send(data);
             return true;
         }

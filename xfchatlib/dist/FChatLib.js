@@ -311,28 +311,27 @@ class FChatLib {
     }
     queueData(messageType, content) {
         this.commands.push({ messageType, content, index: this.commands.length });
-        console.log(`Pushed a new command, length is now ${this.commands.length}`);
+        //console.log(`Pushed a new command, length is now ${this.commands.length}`);
         this.sendCommandWhenReady();
     }
     sendCommandWhenReady() {
         return __awaiter(this, void 0, void 0, function* () {
-            let id = Date.now().toString().substring(-4);
-            console.log(`Received command ${id}, ${this.commands.length} total commands`);
+            console.log(`Received new command, ${this.commands.length} total commands.`);
             let timeToWait = (this.commands.length - 1) * this.floodLimit * 1000;
             let timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
             if (timeSinceLastCommand < this.floodLimit * 1000)
                 timeToWait += (this.floodLimit * 1000 - timeSinceLastCommand);
             while (timeSinceLastCommand < this.floodLimit * 1000) {
-                console.log(`Waiting ${timeToWait} ms (command ${id})`);
+                console.log(`Waiting ${timeToWait} ms`);
                 yield this.timeout(timeToWait);
                 timeToWait = 444;
-                console.log(`Finished waiting. (command ${id})`);
+                console.log(`Finished waiting.`);
                 timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
             }
             let command = this.commands[0];
             this.sendWS(command.messageType, command.content);
             this.commands.splice(0, 1);
-            console.log(`Removed a new command, length is now ${this.commands.length}`);
+            //!console.log(`Removed a new command, length is now ${this.commands.length}`);
             this.lastTimeCommandSent = Date.now();
         });
     }

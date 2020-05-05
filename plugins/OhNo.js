@@ -47,6 +47,10 @@ class OhNo {
             ddbug: (args, data) => {
                 console.log(args, data);
                 if (!this.helper.isUserMaster(data)) return;
+                this.addbot(' Bot 1, Bot 2, Bot 3', data);
+                this.joingame(args, data);
+                this.configuregame('startingHandSize=3, targetScore=50', data);
+                this.ready(args, data);
                 // if (this.game.isInProgress) {
                 //     this.game.endPrematurely();
                 // } else {
@@ -57,11 +61,6 @@ class OhNo {
                 //     this.game.config.targetScore = 10;
                 // }
                 // this.startgame('', {character: `Tom_Kat`, channel: this.channel});
-                let arr = [];
-                for (let i = 1; i <= 5; i++) {
-                    arr.push(i);
-                }
-                arr.forEach(num => this.helper.msgRoom(`Flood test ${num} ahhhh`, data.channel));
             },
             eval: (args, data) => {
                 console.log(args, data);
@@ -69,6 +68,13 @@ class OhNo {
                 const echo = (str) => this.helper.msgRoom(str, data.channel);
                 eval(args);
             },
+            // floodtest: (args, data) => {
+            //     let arr = [];
+            //     for (let i = 1; i <= 5; i++) {
+            //         arr.push(i);
+            //     }
+            //     arr.forEach(num => this.helper.msgRoom(`Flood test ${num} ahhhh`, data.channel));
+            // },
             clean: (args, data) => {
                 if (!this.helper.isUserChatOP(data)) return;
                 this.helper.msgRoom(`/me wipes down the table.`, data.channel);
@@ -510,19 +516,24 @@ class OhNo {
         let player = this.game.findPlayerWithName(username, this.game.allPlayers);
         if (!player) {
             str = `Could not find a player called ${username}. Make sure to !join the game first.`;
-        } if (player.isReady) {
+        } else if (player.isReady) {
             str = `You are already readied up, ${username}.`;
         } else {
             player.isReady = true;
-            str = `${username} is ready to play the next ${this.game.isInProgress ? `round` : `game`}.`;
+            let roundOrGame = this.game.isInProgress ? `round` : `game`;
+            str = `${username} is ready to play the next ${roundOrGame}.`;
             let length = this.game.getApprovedReadiedPlayers().length;
             if (length < 2) {
-                str += ` Waiting for at least two approved ready players before starting the round. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved ready player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
+                str += ` Waiting for at least two approved ready players before starting the ${roundOrGame}. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved ready player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
             } else if (length < this.game.getApprovedPlayers().length) {
                 str += ` ${length} out of ${this.game.players.length} approved players are ready.`;
             } else {
-                this.game.startRound();
-                str += ` All players are ready. [b]A new round has begun![/b]\n\n${this.helper.promptCurrentPlayer()}`;
+                if (this.game.isInProgress) {
+                    this.game.startRound();
+                } else {
+                    this.game.startGame();
+                }
+                str += ` All players are ready. [b]A new ${roundOrGame} has begun![/b]\n\n${this.helper.promptCurrentPlayer()}`;
             }
         }
         this.helper.msgRoom(str, data.channel);
@@ -543,7 +554,7 @@ class OhNo {
                 if (length < 2) {
                     str = `Waiting for at least two approved ready players before starting the round. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved ready player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, ready with !ready, and an OP can approve them with !approve.`;
                 } else if (length < this.game.getApprovedPlayers().length) {
-                    str = `Waiting for all approved players to ready up. Currently, ${length} out of ${this.game.players.length} approved players are ready.`;
+                    str = `Waiting for all approved players to ready up. Currently, ${length} out of ${this.game.getApprovedPlayers().length} approved players are ready.`;
                 } else {
                     this.game.startRound();
                     str = `[b]A new round has begun![/b]\n\n${this.helper.promptCurrentPlayer()}`;
@@ -554,7 +565,7 @@ class OhNo {
             if (length < 2) {
                 str = `Waiting for at least two approved ready players before starting the game. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved ready player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, ready with !ready, and an OP can approve them with !approve.`;
             } else if (length < this.game.getApprovedPlayers().length) {
-                str = `Waiting for all approved players to ready up. Currently, ${length} out of ${this.game.players.length} approved players are ready.`;
+                str = `Waiting for all approved players to ready up. Currently, ${length} out of ${this.game.getApprovedPlayers().length} approved players are ready.`;
             } else {
                 this.game.startGame();
                 str = `[b]A new game has begun![/b]\n${this.helper.promptCurrentPlayer()}`;
@@ -666,12 +677,17 @@ class OhNo {
             let unapproved = [];
             let approvedReady = [];
             let approvedUnready = [];
-            let ingame = [];
+            let ingameUnready = [];
+            let ingameReady = [];
             this.game.allPlayers.forEach(player => {
                 if (!player.isApproved) {
                     unapproved.push(player);
                 } else if (this.game.isInProgress && this.game.players.includes(player)) {
-                    ingame.push(player);
+                    if (player.isReady) {
+                        ingameReady.push(player);
+                    } else {
+                        ingameUnready.push(player);
+                    }
                 } else {
                     if (player.isReady) {
                         approvedReady.push(player);
@@ -681,13 +697,15 @@ class OhNo {
                 }
             })
             const playersToString = (players, withScore=false) => {
-                return players.map(player => player.getName() + (withScore ? ` ${player.score.getValue()} points` : '')).join(', ');
+                return players.map(player => player.getName() + (withScore ? ` (${player.score.getValue()} points)` : '')).join(', ');
             }
             str += `${unapproved.length > 0 ? `Unapproved players: ${playersToString(unapproved)}` : `There are no unapproved players`}.`
             //str += `${approved.length > 0 ? ` Approved players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approved)}` : ``}`
-            str += `${approvedUnready.length > 0 ? ` Approved unready players: ${playersToString(approvedUnready)}` : ``}.`
-            str += `${approvedReady.length > 0 ? ` Approved ready players: ${playersToString(approvedReady)}` : ``}.`
-            if (this.game.isInProgress) str += ` ${ingame.length > 0 ? `Approved players in current game: ${playersToString(ingame, true)}` : `There are no players in the current game... somehow`}.`
+            str += `${approvedUnready.length > 0 ? ` Approved unready players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approvedUnready)}` : ``}.`
+            str += `${approvedReady.length > 0 ? ` Approved ready players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approvedReady)}` : ``}.`
+            str += `${ingameUnready.length > 0 ? ` Approved unready players (in active game): ${playersToString(ingameUnready, true)}` : ``}.`
+            str += `${ingameReady.length > 0 ? ` Approved ready players (in active game): ${playersToString(ingameReady, true)}` : ``}.`
+            //if (this.game.isInProgress) str += ` ${ingame.length > 0 ? `Approved players in current game: ${playersToString(ingame, true)}` : `There are no players in the current game... somehow`}.`
             this.helper.msgRoom(str, data.channel);
         }
     }
