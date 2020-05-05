@@ -292,45 +292,72 @@ export default class FChatLib implements IFChatLib{
 
     floodLimit:number = 1.0;
     // lastTimeCommandReceived:number = Number.MAX_VALUE;
-    lastTimeCommandReceived:number = 0;
-    commandsInQueue:number = 0;
-    commandQueues = {};
+    //lastTimeCommandReceived:number = 0;
+    //commandsInQueue:number = 0;
+    //commandQueues = {};
+    commands = [];
+    lastTimeCommandSent:number = Date.now();
 
     timeout(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async sendData(messageType: string, content: string, queueKey: string):Promise<void>{
-        queueKey = 'GLOBAL';
-        if (!this.commandQueues[queueKey]) this.commandQueues[queueKey] = {commands: [], lastReceived: new Date('January 1, 2000 00:00:00')};
-        let q = this.commandQueues[queueKey];
-        let timeToWait = q.commands.length * this.floodLimit * 1000;
-        for (let i = 0; i < q.commands.length; i++) {
-            timeToWait += q.commands[i].timeToWait;
-        }
-        let timeSinceLastCommand = (Date.now() - q.lastReceived);
-        if (timeSinceLastCommand < this.floodLimit * 1000) {
-            timeToWait += (this.floodLimit * 1000) - timeSinceLastCommand;
-        }
-        let command = {messageType, content, timeToWait};
-        q.commands.push(command);
-        console.log(`Time since last command for ${queueKey}: ${timeSinceLastCommand}`);
-        if (timeToWait > 0) {
-            console.log(`Waiting approximately ${command.timeToWait/1000} seconds...`)
-            while (command.timeToWait > 0 || q.commands.indexOf(command) !== 0) {
-                let awaitTime = command.timeToWait <= 0 ? 500 : command.timeToWait;
-                //console.log(`Time to wait: ${timeToWait}`);
-                await this.timeout(awaitTime);
-                command.timeToWait -= awaitTime;
-                console.log(`Waited ${awaitTime/1000} s. Remaining time to wait: ${command.timeToWait/1000} s. Command index: ${q.commands.indexOf(command)}`);
-            }
-        }
-        q.lastReceived = Date.now();
-        //console.log(`Sending WS at ${Date.now()}`);
-        //console.log(content);
-        this.sendWS(messageType, content);
-        q.commands.splice(q.commands.indexOf(command), 1);
+    queueData(messageType:string, content:string) {
+        this.commands.push({messageType, content, index: this.commands.length});
+        //console.log(`Pushed a new command, length is now ${this.commands.length}`);
+        this.sendCommandWhenReady();
     }
+
+    async sendCommandWhenReady() {
+        console.log(`Received new command, ${this.commands.length} total commands.`);
+        let timeToWait = (this.commands.length - 1) * this.floodLimit * 1000;
+        let timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
+        if (timeSinceLastCommand < this.floodLimit * 1000) timeToWait += (this.floodLimit * 1000 - timeSinceLastCommand);
+        while (timeSinceLastCommand < this.floodLimit * 1000) {
+            console.log(`Waiting ${timeToWait} ms`);
+            await this.timeout(timeToWait);
+            timeToWait = 444;
+            console.log(`Finished waiting.`);
+            timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
+        }
+        let command = this.commands[0];
+        this.sendWS(command.messageType, command.content);
+        this.commands.splice(0, 1);
+        //!console.log(`Removed a new command, length is now ${this.commands.length}`);
+        this.lastTimeCommandSent = Date.now();
+    }
+
+    // async sendData(messageType: string, content: string, queueKey: string):Promise<void>{
+    //     queueKey = 'GLOBAL';
+    //     if (!this.commandQueues[queueKey]) this.commandQueues[queueKey] = {commands: [], lastReceived: new Date('January 1, 2000 00:00:00')};
+    //     let q = this.commandQueues[queueKey];
+    //     let timeToWait = q.commands.length * this.floodLimit * 1000;
+    //     for (let i = 0; i < q.commands.length; i++) {
+    //         timeToWait += q.commands[i].timeToWait;
+    //     }
+    //     let timeSinceLastCommand = (Date.now() - q.lastReceived);
+    //     if (timeSinceLastCommand < this.floodLimit * 1000) {
+    //         timeToWait += (this.floodLimit * 1000) - timeSinceLastCommand;
+    //     }
+    //     let command = {messageType, content, timeToWait};
+    //     q.commands.push(command);
+    //     console.log(`Time since last command for ${queueKey}: ${timeSinceLastCommand}`);
+    //     if (timeToWait > 0) {
+    //         console.log(`Waiting approximately ${command.timeToWait/1000} seconds...`)
+    //         while (command.timeToWait > 0 || q.commands.indexOf(command) !== 0) {
+    //             let awaitTime = command.timeToWait <= 0 ? 500 : command.timeToWait;
+    //             //console.log(`Time to wait: ${timeToWait}`);
+    //             await this.timeout(awaitTime);
+    //             command.timeToWait -= awaitTime;
+    //             console.log(`Waited ${awaitTime/1000} s. Remaining time to wait: ${command.timeToWait/1000} s. Command index: ${q.commands.indexOf(command)}`);
+    //         }
+    //     }
+    //     q.lastReceived = Date.now();
+    //     //console.log(`Sending WS at ${Date.now()}`);
+    //     //console.log(content);
+    //     this.sendWS(messageType, content);
+    //     q.commands.splice(q.commands.indexOf(command), 1);
+    // }
 
     constructor(configuration:IConfig){
         if(configuration == null){
@@ -531,14 +558,14 @@ export default class FChatLib implements IFChatLib{
         let json:any = {};
         json.channel = channel;
         json.message = message;
-        this.sendData('MSG', json, channel);
+        this.queueData('MSG', json);
     }
 
     sendPrivMessage(message, character){
         let json:any = {};
         json.message = message;
         json.recipient = character;
-        this.sendData('PRI', json, character);
+        this.queueData('PRI', json);
     }
 
     getUserList(channel){
@@ -579,7 +606,7 @@ export default class FChatLib implements IFChatLib{
         let json:any = {};
         json.dice = customDice || "1d10";
         json.channel = channel;
-        this.sendData("RLL", json, channel);
+        this.queueData("RLL", json);
     }
 
     updateRoomsConfig():void{

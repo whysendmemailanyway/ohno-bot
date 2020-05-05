@@ -44,6 +44,7 @@ export default class FChatLib implements IFChatLib {
     addVariableListener(fn: any): void;
     removeVariableListener(fn: any): void;
     config: IConfig;
+    errorListeners: any[];
     banListeners: any[];
     chatOPAddedListeners: any[];
     chatOPListListeners: any[];
@@ -70,11 +71,11 @@ export default class FChatLib implements IFChatLib {
     ws: any;
     pingInterval: NodeJS.Timer;
     floodLimit: number;
-    lastTimeCommandReceived: number;
-    commandsInQueue: number;
-    commandQueues: {};
+    commands: any[];
+    lastTimeCommandSent: number;
     timeout(ms: any): Promise<{}>;
-    sendData(messageType: string, content: string, queueKey: string): Promise<void>;
+    queueData(messageType: string, content: string): void;
+    sendCommandWhenReady(): Promise<void>;
     constructor(configuration: IConfig);
     generateCommandHandlers(): void;
     setFloodLimit(delay: any): void;

@@ -66,9 +66,9 @@ export interface IFChatLib {
     ws: any;
     pingInterval: NodeJS.Timer;
     floodLimit: number;
-    lastTimeCommandReceived: number;
-    commandsInQueue: number;
-    sendData(messageType: string, content: string, queueKey: string): Promise<void>;
+    lastTimeCommandSent: number;
+    commands: any;
+    queueData(messageType: string, content: string): void;
     generateCommandHandlers(): void;
     setFloodLimit(delay: any): void;
     connect(): Promise<void>;

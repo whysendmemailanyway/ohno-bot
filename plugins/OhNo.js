@@ -47,16 +47,21 @@ class OhNo {
             ddbug: (args, data) => {
                 console.log(args, data);
                 if (!this.helper.isUserMaster(data)) return;
-                if (this.game.isInProgress) {
-                    this.game.endPrematurely();
-                } else {
-                    this.game.addPlayer('Tom_Kat');
-                    this.game.addPlayer('Ellen Strand');
-                    this.game.allPlayers.forEach(player => player.isApproved = true);
-                    this.game.config.startingHandSize = 4;
-                    this.game.config.targetScore = 10;
+                // if (this.game.isInProgress) {
+                //     this.game.endPrematurely();
+                // } else {
+                //     this.game.addPlayer('Tom_Kat');
+                //     this.game.addPlayer('Ellen Strand');
+                //     this.game.allPlayers.forEach(player => player.isApproved = true);
+                //     this.game.config.startingHandSize = 4;
+                //     this.game.config.targetScore = 10;
+                // }
+                // this.startgame('', {character: `Tom_Kat`, channel: this.channel});
+                let arr = [];
+                for (let i = 1; i <= 5; i++) {
+                    arr.push(i);
                 }
-                this.startgame('', {character: `Tom_Kat`, channel: this.channel});
+                arr.forEach(num => this.helper.msgRoom(`Flood test ${num} ahhhh`, data.channel));
             },
             eval: (args, data) => {
                 console.log(args, data);
@@ -93,6 +98,8 @@ class OhNo {
                 })
             },
             telljoke: async (args, data) => {
+                //this.helper.msgRoom(`Sorry, that command has been removed for being too edgy. Try nice wholesome !dadjoke instead.`, data.channel);
+                return;
                 if (!this.helper.isUserChatOP(data)) return;
                 args = args.length > 0 ? args.toLowerCase().split(' ') : [];
                 let url = 'https://sv443.net/jokeapi/v2/joke/';
@@ -390,7 +397,6 @@ class OhNo {
                     player.isBot = true;
                     player.wasHuman = false;
                     player.isReady = true;
-                    console.log(`Set bot's ready status to ${player.isReady}.`);
                     successes++;
                 } else {
                     failures++;
@@ -507,6 +513,7 @@ class OhNo {
         } if (player.isReady) {
             str = `You are already readied up, ${username}.`;
         } else {
+            player.isReady = true;
             str = `${username} is ready to play the next ${this.game.isInProgress ? `round` : `game`}.`;
             let length = this.game.getApprovedReadiedPlayers().length;
             if (length < 2) {
@@ -679,7 +686,7 @@ class OhNo {
             str += `${unapproved.length > 0 ? `Unapproved players: ${playersToString(unapproved)}` : `There are no unapproved players`}.`
             //str += `${approved.length > 0 ? ` Approved players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approved)}` : ``}`
             str += `${approvedUnready.length > 0 ? ` Approved unready players: ${playersToString(approvedUnready)}` : ``}.`
-            str += `${approvedReady.length > 0 ? ` Approved unready players: ${playersToString(approvedReady)}` : ``}.`
+            str += `${approvedReady.length > 0 ? ` Approved ready players: ${playersToString(approvedReady)}` : ``}.`
             if (this.game.isInProgress) str += ` ${ingame.length > 0 ? `Approved players in current game: ${playersToString(ingame, true)}` : `There are no players in the current game... somehow`}.`
             this.helper.msgRoom(str, data.channel);
         }
