@@ -1,34 +1,32 @@
-const DECKDATA = require('./OhNoDeckData');
 const UTILS = require('./OhNoUtils');
 
 class OhNoCard {
-    constructor(rank, score, color, name) {
+    constructor(rank, score, color, name, deckData) {
         this.color = color;
         this.rank = rank;
         this.score = score;
         this.name = name || rank.toLowerCase();
+        this.deckData = deckData;
     }
 
     getName(withBbc=false) {
         if (!withBbc) return UTILS.titleCase(this.name);
         if (this.color) {
             let cardColor = this.color.toLowerCase();
-            return `[color=purple][color=${DECKDATA.COLOR_MAP[cardColor] || cardColor}]${UTILS.titleCase(this.name)}[/color][/color]`;
+            let colors = this.deckData.COLOR_MAP[cardColor];
+            return `[color=${colors.outer}][color=${colors.inner}]${UTILS.titleCase(this.name)}[/color][/color]`;
         } else {
-            let colors = ['white', 'yellow', 'brown', 'purple'];
-            // TODO: wild color
-            // [color=purple]W[/color][color=purple]I[/color][color=purple]L[/color][color=purple]D[/color]
-            // [color=purple][color=white]X[/color][/color][color=purple][color=yellow]X[/color][/color][color=purple][color=brown]X[/color][/color][color=purple][color=purple]X[/color][/color]
-            return UTILS.titleCase(this.name).split('').map((char, i) => `[color=purple][color=${colors[i % colors.length]}]${char}[/color][/color]`).join('');
+            let colors = this.deckData.COLORS.map(color => this.deckData.COLOR_MAP[color.toLowerCase()]);
+            return UTILS.titleCase(this.name).split('').map((char, i) => `[color=${colors[i % colors.length].outer}][color=${colors[i % colors.length].inner}]${char}[/color][/color]`).join('');
         }
     }
 
     isAction() {
-        return (DECKDATA.ACTION_RANKS.includes(this.rank));
+        return (this.deckData.ACTION_RANKS.includes(this.rank.toLowerCase()));
     }
 
     isWild() {
-        return (DECKDATA.WILD_RANKS.includes(this.rank));
+        return (this.deckData.WILD_RANKS.includes(this.rank.toLowerCase()));
     }
 }
 

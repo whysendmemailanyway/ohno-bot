@@ -1,4 +1,3 @@
-const DECKDATA = require('./OhNoDeckData');
 const UTILS = require('./OhNoUtils');
 
 class OhNoHelper {
@@ -61,7 +60,7 @@ class OhNoHelper {
 
     getTurnOutput = (player) => {
         let privateString = `[b]Current game: ${this.fChatClient.channels.get(this.channel).channelTitle}[/b]\n`;
-        privateString += `The top discard is [b]${this.game.discards.top().getName(true)}[/b]${this.game.discards.top().isWild() ? `, the wild color is [b][color=purple][color=${DECKDATA.COLOR_MAP[this.game.wildColor.toLowerCase()]}]${UTILS.titleCase(this.game.wildColor)}[/color][/color][/b]` : ``}. Your hand:\n`;
+        privateString += `The top discard is [b]${this.game.discards.top().getName(true)}[/b]${this.game.discards.top().isWild() ? `, the wild color is [b]${this.game.deckData.applyBbcToColor(this.game.wildColor)}[/b]` : ``}. Your hand:\n`;
         privateString += `    ${player.handToString(true, this.game.isCardPlayable)}\n\n`;
         return privateString;
     }
@@ -85,11 +84,11 @@ class OhNoHelper {
         if (playerInDanger) {
             let bots = this.game.players.filter(player => player.isBot);
             for (let i = 0; i < bots.length; i++) {
-                if (Math.floor(Math.random() * 100) % 4 === 0) {
+                if (Math.floor(Math.random() * 100) % 6 === 0) {
                     setTimeout(() => {
                         if (!this.game.isRoundInProgress) return;
-                        this.msgRoom(this.game.shout(playerInDanger), this.channel);
-                    }, Math.random() * this.botTurnTime * 1000);
+                        this.msgRoom(this.game.shout(bots[i]), this.channel);
+                    }, this.game.config.botTurnTime + (Math.random() * (this.game.config.botTurnTime - this.fChatClient.floodLimit) * 1000));
                 }
             }
         }
@@ -172,7 +171,7 @@ class OhNoHelper {
                         play = {
                             card: this.game.getHighestPlayableCard(),
                             withShout: player.hand.length == 2 ? Math.floor(Math.random() * 100) % 4 !== 0 : false,
-                            wildColor: Math.floor(Math.random() * 100) % 4 === 0 ? DECKDATA.COLORS[Math.floor(Math.random() * DECKDATA.COLORS.length)] : player.getMostCommonColor()
+                            wildColor: Math.floor(Math.random() * 100) % 4 === 0 ? this.game.deckData.COLORS[Math.floor(Math.random() * this.game.deckData.COLORS.length)] : player.getMostCommonColor()
                         };
                         console.log(`Going with a dangerous play!`);
                     } else {

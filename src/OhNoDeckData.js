@@ -1,72 +1,127 @@
-const NUMBER_RANKS = [
-    'MOUSE', // 0.68 oz
-    'BIRD', // 1.3 oz
-    'BUNNY', // 2-5 lbs
-    'BASS', // 6-12 lbs
-    'CAT', // 7.9-9.9 lbs
-    'DOG', // 12-100 lbs
-    'SHEEP', // 100-300 lbs
-    'DEER', // 100-400 lbs
-    'PIG', // 110-770 lbs
-    'COW', // 1600-2400 lbs
-]
-
-const RANK_SKIP = 'SKIP';
-const RANK_REVERSE = 'REVERSE';
-const RANK_DRAW_2 = 'BREED 2';
-
-const RANK_WILD = 'WILD';
-const RANK_WILD_DRAW_4 = 'WILD BREED 4';
-
-const COLORS = [
-    'BLACK',
-    'WHITE',
-    'BLONDE',
-    'BROWN'
-];
-
-const COLOR_MAP = {
-    'blonde': 'yellow',
-    'black': 'purple',
-    'white': 'white',
-    'brown': 'brown'
+const defaultConfig = {
+    RANK_0: `ZERO`,
+    RANK_1: `ONE`,
+    RANK_2: `TWO`,
+    RANK_3: `THREE`,
+    RANK_4: `FOUR`,
+    RANK_5: `FIVE`,
+    RANK_6: `SIX`,
+    RANK_7: `SEVEN`,
+    RANK_8: `EIGHT`,
+    RANK_9: `NINE`,
+    RANK_SKIP: `SKIP`,
+    RANK_REVERSE: `REVERSE`,
+    RANK_DRAW_2: `DRAW 2`,
+    RANK_WILD: `WILD`,
+    RANK_WILD_DRAW_4: `WILD DRAW 4`,
+    COLOR_0: `RED`,
+    COLOR_1: `YELLOW`,
+    COLOR_2: `GREEN`,
+    COLOR_3: `BLUE`,
+    COLOR_MAP: {
+        'RED':  {outer: `purple`, inner: 'red'},
+        'YELLOW': {outer: `purple`, inner: 'yellow'},
+        'GREEN': {outer: `purple`, inner: 'green'},
+        'BLUE': {outer: `purple`, inner: 'blue'},
+    },
 }
 
-const ACTION_RANKS = [RANK_SKIP, RANK_REVERSE, RANK_DRAW_2];
+class OhNoDeckData {
+    constructor(config = defaultConfig) {
+        this.NUMBER_RANKS = [];
+        for (let i = 0; i < 10; i++) {
+            let rank = config[`RANK_${i}`].toLowerCase();
+            this[`RANK_${i}`] = rank;
+            this.NUMBER_RANKS.push(rank);
+        }
+        this.RANK_SKIP = config.RANK_SKIP.toLowerCase();
+        this.RANK_REVERSE = config.RANK_REVERSE.toLowerCase();
+        this.RANK_DRAW_2 = config.RANK_DRAW_2.toLowerCase();
 
-const WILD_RANKS = [RANK_WILD, RANK_WILD_DRAW_4];
+        this.RANK_WILD = config.RANK_WILD.toLowerCase();
+        this.RANK_WILD_DRAW_4 = config.RANK_WILD_DRAW_4.toLowerCase();
+        
+        this.ACTION_RANKS = [this.RANK_SKIP, this.RANK_REVERSE, this.RANK_DRAW_2];
+        this.WILD_RANKS = [this.RANK_WILD, this.RANK_WILD_DRAW_4];
 
-const SCORE_MAP = {};
-NUMBER_RANKS.forEach((rank, index) => SCORE_MAP[rank] = index);
-ACTION_RANKS.forEach((rank) => SCORE_MAP[rank] = 20);
-WILD_RANKS.forEach((rank) => SCORE_MAP[rank] = 50);
+        this.COLORS = [];
+        for (let i = 0; i < 4; i++) {
+            let color = config[`COLOR_${i}`].toLowerCase();
+            this[`COLOR_${i}`] = color;
+            this.COLORS.push(color);
+        }
 
-const ALL_CARD_NAMES = [];
-COLORS.forEach(color => {
-    NUMBER_RANKS.forEach((rank) => ALL_CARD_NAMES.push(`${color} ${rank}`));
-    ACTION_RANKS.forEach((rank) => ALL_CARD_NAMES.push(`${color} ${rank}`));
-})
-WILD_RANKS.forEach((rank) => ALL_CARD_NAMES.push(rank));
+        this.COLOR_MAP = {};
+        Object.keys(config.COLOR_MAP).forEach(color => this.COLOR_MAP[color.toLowerCase()] = config.COLOR_MAP[color]);
 
-module.exports = {
-    NUMBER_RANKS,
-    
-    RANK_SKIP,
-    RANK_REVERSE,
-    RANK_DRAW_2,
-    
-    ACTION_RANKS,
-    
-    RANK_WILD,
-    RANK_WILD_DRAW_4,
-    
-    WILD_RANKS,
+        const makeAliases = (input, myKey) => {
+            this[myKey] = {};
+            if (input) {
+                let aliases = {};
+                Object.keys(input).forEach(key => aliases[key.toLowerCase()] = input[key]);
+                Object.keys(aliases).forEach(aliasKey => {
+                    aliases[aliasKey.toLowerCase()].forEach(alias => this[myKey][alias.toLowerCase()] = aliasKey.toLowerCase())
+                });
+            }
+        }
+        let rankAliasesInput = {};
+        Object.keys(config.RANK_ALIASES).forEach(key => rankAliasesInput[key.toLowerCase()] = config.RANK_ALIASES[key]);
+        this.NUMBER_RANKS.forEach((rank, index) => {
+            rank = rank.toLowerCase();
+            if (!rankAliasesInput[rank]) rankAliasesInput[rank] = [];
+            rankAliasesInput[rank].push(`${index}`);
+            rankAliasesInput[rank].push(`${defaultConfig[`RANK_${index}`].toLowerCase()}`);
+        });
+        [...this.ACTION_RANKS, ...this.WILD_RANKS].forEach(rank => {
+            if (!rankAliasesInput[rank]) rankAliasesInput[rank] = [];
+            let alias = 'ALIAS ERROR';
+            switch(rank) {
+                case this.RANK_SKIP: alias = `skip`; break;
+                case this.RANK_REVERSE: alias = `reverse`; break;
+                case this.RANK_DRAW_2: alias = `draw 2`; break;
+                case this.RANK_WILD: alias = `wild`; break;
+                case this.RANK_WILD_DRAW_4: alias = `wild draw 4`; break;
+            }
+            rankAliasesInput[rank].push(alias);
+        })
+        makeAliases(rankAliasesInput, `RANK_ALIASES`);
+        makeAliases(config.COLOR_ALIASES, `COLOR_ALIASES`);
+        makeAliases(config.CARD_NAME_ALIASES, `CARD_NAME_ALIASES`);
+        
+        this.SHOUT_ALIASES = [`shout`, `s`, `yell`, `y`, `scream`];
+        const shouts = this.SHOUT_ALIASES.map(alias => `!*${alias}`).join(`|`);
+        const colors = [...this.COLORS, ...Object.keys(this.COLOR_ALIASES)].join(`|`);
+        let ranks = [...this.NUMBER_RANKS, ...this.ACTION_RANKS];
+        let wildRanks = [...this.WILD_RANKS];
+        let cardNames = [...Object.keys(this.CARD_NAME_ALIASES)].sort((a, b) => b.length - a.length).join(`|`);
+        Object.keys(this.RANK_ALIASES).forEach(alias => {
+            let rank = this.RANK_ALIASES[alias];
+            if (this.isWild(rank)) {
+                wildRanks.push(alias);
+            } else {
+                ranks.push(alias);
+            }
+        })
+        ranks = ranks.join(`|`);
+        wildRanks = wildRanks.join(`|`);
+        let regstr = `(?<cardname>((?:${colors}) (?:${ranks}))|(?:${wildRanks})|(?:${cardNames}))(?: (?<wildcolor>${colors}))*(?: (?<shout>${shouts}))*`;
+        this.matcher = new RegExp(regstr);
+    }
 
-    COLORS,
+    isWild(rank) {
+        return this.WILD_RANKS.includes(rank);
+    }
 
-    COLOR_MAP,
+    getScore(rank) {
+        if (this.NUMBER_RANKS.includes(rank)) return parseInt(rank);
+        if (this.ACTION_RANKS.includes(rank)) return 20;
+        if (this.WILD_RANKS.includes(rank)) return 50;
+    }
 
-    SCORE_MAP,
+    applyBbcToColor(color) {
+        let obj = this.COLOR_MAP[color.toLowerCase()];
+        return `[color=${obj.outer}][color=${obj.inner}]${color}[/color][/color]`;
+    }
+}
 
-    ALL_CARD_NAMES
-};
+module.exports.default = OhNoDeckData;

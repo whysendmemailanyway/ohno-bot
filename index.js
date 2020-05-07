@@ -3,6 +3,39 @@ require('dotenv').config();
 let FChatLib = require('./xfchatlib').default;
 let botPlugin = require('./plugins/OhNo').CommandHandler;
 let OhNoGame = require('./src/OhNoGame').default;
+
+// cd xfchatlib/ && npm install && cd .. && npm start
+
+// let game = new OhNoGame();
+// let names = ['Oney', 'Twoey', 'Threey', 'Fourey', 'Fivey', 'Sixy', 'Seveny', 'Eighty', 'Niney', 'Tenny'];
+// const numOfPlayers = 4;
+// for (let i = 0; i < numOfPlayers; i++) {
+//     game.addPlayer(names[i]);
+//     game.approvePlayer(names[i]);
+//     game.findPlayerWithName(names[i], game.allPlayers).isReady = true;
+// }
+// game.startGame();
+// while (game.isInProgress) {
+//     if (game.draw4LastTurn && Math.floor(Math.random() * 100) % 4 === 0) game.challengeDraw4();
+//     game.startTurn();
+//     let hand = game.currentPlayer.hand;
+//     let played = false;
+//     for (let i = hand.length - 1; i >= 0; i--) {
+//         if (game.isCardPlayable(hand[i])) {
+//             let play = game.getSafestPlay();
+//             let result = game.playCard(play.card, game.currentPlayer, play.wildColor, play.withShout);
+//             if (!result) throw `Unplayable situation???`;
+//             played = true;
+//             break;
+//         }
+//     }
+//     if (!played) {
+//         game.pass();
+//         game.pass();
+//     }
+// }
+// return;
+
 let options = {
     username: process.env.FLIST_USERNAME,
     password: process.env.FLIST_PASSWORD,

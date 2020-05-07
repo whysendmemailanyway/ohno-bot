@@ -75,7 +75,7 @@ export default class FChatLib implements IFChatLib {
     lastTimeCommandSent: number;
     timeout(ms: any): Promise<{}>;
     queueData(messageType: string, content: string): void;
-    sendCommandWhenReady(): Promise<void>;
+    sendCommandWhenReady(command: any): Promise<void>;
     constructor(configuration: IConfig);
     generateCommandHandlers(): void;
     setFloodLimit(delay: any): void;

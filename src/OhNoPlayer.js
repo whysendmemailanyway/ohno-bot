@@ -1,8 +1,7 @@
-let DECKDATA = require('./OhNoDeckData');
 let OhNoScore = require('./OhNoScore').default;
 
 module.exports.default = class OhNoPlayer {
-    constructor(name) {
+    constructor(name, game) {
         this.name = name;
         this.hand;
         this.hasShouted;
@@ -13,12 +12,13 @@ module.exports.default = class OhNoPlayer {
         this.isReady = false;
         this.alias;
         this.wasHuman = true;
+        this.game = game;
         this.resetForGame();
     }
 
-    resetForGame() {
+    resetForGame = () => {
         this.resetForRound()
-        this.score = new OhNoScore();
+        this.score = new OhNoScore(this.game.deckData);
     }
 
     resetForRound() {
@@ -73,11 +73,11 @@ module.exports.default = class OhNoPlayer {
 
     getMostCommonColor() {
         let counts = {};
-        DECKDATA.COLORS.forEach((color) => counts[color] = 0);
+        this.game.deckData.COLORS.forEach((color) => counts[color] = 0);
         for (let i = 0; i < this.hand.length; i++) {
             if (this.hand[i].color) counts[this.hand[i].color]++;
         }
-        let highestCount = DECKDATA.COLORS[0];
+        let highestCount = this.game.deckData.COLORS[0];
         console.log(highestCount);
         for (let i = 1; i < Object.keys(counts).length; i++) {
             let key = Object.keys(counts)[i];

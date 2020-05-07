@@ -310,25 +310,27 @@ class FChatLib {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     queueData(messageType, content) {
-        this.commands.push({ messageType, content, index: this.commands.length });
+        // TODO: use a real ID here, cuid() or something
+        let command = { messageType, content, id: Math.random() };
+        this.commands.push(command);
         //console.log(`Pushed a new command, length is now ${this.commands.length}`);
-        this.sendCommandWhenReady();
+        this.sendCommandWhenReady(command);
     }
-    sendCommandWhenReady() {
+    sendCommandWhenReady(command) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log(`Received new command, ${this.commands.length} total commands.`);
+            //console.log(`Received new command, ${this.commands.length} total commands.`);
             let timeToWait = (this.commands.length - 1) * this.floodLimit * 1000;
             let timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
             if (timeSinceLastCommand < this.floodLimit * 1000)
                 timeToWait += (this.floodLimit * 1000 - timeSinceLastCommand);
-            while (timeSinceLastCommand < this.floodLimit * 1000) {
+            while (timeSinceLastCommand < this.floodLimit * 1000 || this.commands[0] !== command) {
                 console.log(`Waiting ${timeToWait} ms`);
                 yield this.timeout(timeToWait);
                 timeToWait = 444;
                 console.log(`Finished waiting.`);
                 timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
             }
-            let command = this.commands[0];
+            //let command = this.commands[0];
             this.sendWS(command.messageType, command.content);
             this.commands.splice(0, 1);
             //!console.log(`Removed a new command, length is now ${this.commands.length}`);
@@ -602,7 +604,9 @@ class FChatLib {
                 catch (e) {
                 }
                 if (argument.channel !== undefined && argument.channel.substring(0, 3).toLowerCase() === `adh`) {
+                    //console.log(`Fixing channel case for ${argument.channel}...`);
                     argument.channel = argument.channel.substring(0, 3).toUpperCase() + argument.channel.substring(3).toLowerCase();
+                    //console.log(`Adjusted to ${argument.channel}.`);
                 }
                 switch (command) {
                     case "CON": //CON { "count": int }

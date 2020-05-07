@@ -1,39 +1,40 @@
 const UTILS = require('./OhNoUtils');
-const DECKDATA = require('./OhNoDeckData');
 
 class OhNoScore {
-    constructor(cards = []) {
+    constructor(deckData, cards = []) {
+        this.deckData = deckData;
+        this.score = {};
         this.scoreCards(cards);
     }
 
     scoreCards(cards) {
         cards.forEach(card => {
-            if (!this[card.rank]) this[card.rank] = 0;
-            this[card.rank]++;
+            if (!this.score[card.rank]) this.score[card.rank] = 0;
+            this.score[card.rank]++;
         });
     }
 
-    toString() {
+    toString () {
         let keys = Object.keys(this);
-        keys.sort((a, b) => DECKDATA.SCORE_MAP[a] - DECKDATA.SCORE_MAP[b]);
+        keys.sort((a, b) => this.deckData.getScore([a]) - this.deckData.getScore([b]));
         let entries = [];
         keys.forEach(key => {
-            let points = DECKDATA.SCORE_MAP[key];
-            entries.push(`${this[key]}x ${UTILS.titleCase(key)} (${points} point${points === 1 ? `` : `s`})`);
+            let points = this.deckData.getScore([key.toLowerCase()]);
+            entries.push(`${this.score[key]}x ${UTILS.titleCase(key)} (${points} point${points === 1 ? `` : `s`})`);
         });
         return `${this.getValue()} points${entries.length > 0 ? `: ${entries.join(', ')}` : ``}.`;
     }
 
-    getValue() {
-        return Object.keys(this).reduce((value, key) => {
-            return value + (this[key] * DECKDATA.SCORE_MAP[key]);
+    getValue () {
+        return Object.keys(this.score).reduce((value, key) => {
+            return value + (this.score[key] * this.deckData.getScore([key.toLowerCase()]));
         }, 0);
     }
     
     addScore(score) {
         Object.keys(score).forEach(key => {
-            if (!this[key]) this[key] = 0;
-            this[key] += score[key];
+            if (!this.score[key]) this.score[key] = 0;
+            this.score[key] += score[key];
         });
     }
 }

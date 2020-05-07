@@ -17,8 +17,6 @@ export default class CommandHandler {
     genableinvites(args: any, data: any): void;
     gjoinchannel(args: any, data: any): void;
     gstatus(args: any, data: any): void;
-    list(args: any, data: any): void;
-    listops(args: any, data: any): void;
     loadplugin(args: any, data: any): void;
     loadedplugins(args: any, data: any): void;
     unloadplugin(args: any, data: any): void;

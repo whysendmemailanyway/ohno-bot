@@ -16,19 +16,22 @@ class OhNo {
             accept: this.acceptb4,
             challenge: this.challengeb4,
             confg: this.configuregame,
-            
+            hand: this.showhand,
             removep: this.removeplayer,
             removeplayers: this.removeplayer,
             remp: this.removeplayer,
             delp: this.removeplayer,
+            leave: this.leavegame,
+            leaveg: this.leavegame,
+
             // TODO: list scores along with players if game is in progress; list active players separately from inactive/unapproved players
+            list: this.listplayers,
             listp: this.listplayers,
             
             sc: this.shortcuts,
             shortc: this.shortcuts,
             scuts: this.shortcuts,
 
-            hand: this.showhand,
             
             //startg: this.startgame,
             // startr: this.startround,
@@ -42,8 +45,8 @@ class OhNo {
             join: this.joingame,
             joing: this.joingame,
 
-            leave: this.leavegame,
-            leaveg: this.leavegame,
+
+
             // dirty debug, does whatever i wants it to does
             ddbug: (args, data) => {
                 console.log(args, data);
@@ -178,7 +181,7 @@ class OhNo {
             '!endgame: !stopgame, !stopg, !stop, !endg, !end.',
             '!joingame: !joing, !join.',
             '!leavegame: !leaveg, !leave.',
-            '!listplayers: !listp.',
+            '!listplayers: !listp, !list.',
             '!removeplayer: !removeplayers, !removep, !remp, !delp.',
             '!shout: !s.',
             '!shortcuts: !shortc, !scuts, !sc.',
@@ -692,10 +695,10 @@ class OhNo {
             }
             str += `${unapproved.length > 0 ? `Unapproved players: ${playersToString(unapproved)}.` : `There are no unapproved players.`}`
             //str += `${approved.length > 0 ? ` Approved players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approved)}` : ``}`
-            str += `${approvedUnready.length > 0 ? ` Approved unready players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approvedUnready)}.` : `.`}`
-            str += `${approvedReady.length > 0 ? ` Approved ready players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approvedReady)}.` : `.`}`
-            str += `${ingameUnready.length > 0 ? ` Approved unready players (in active game): ${playersToString(ingameUnready, true)}.` : `.`}`
-            str += `${ingameReady.length > 0 ? ` Approved ready players (in active game): ${playersToString(ingameReady, true)}.` : `.`}`
+            str += `${approvedUnready.length > 0 ? ` Approved unready players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approvedUnready)}.` : ``}`
+            str += `${approvedReady.length > 0 ? ` Approved ready players${this.game.isInProgress ? ` (not in active game)` : ``}: ${playersToString(approvedReady)}.` : ``}`
+            str += `${ingameUnready.length > 0 ? ` Approved unready players (in active game): ${playersToString(ingameUnready, true)}.` : ``}`
+            str += `${ingameReady.length > 0 ? ` Approved ready players (in active game): ${playersToString(ingameReady, true)}.` : ``}`
             //if (this.game.isInProgress) str += ` ${ingame.length > 0 ? `Approved players in current game: ${playersToString(ingame, true)}` : `There are no players in the current game... somehow`}.`
             this.helper.msgRoom(str, data.channel);
         }

@@ -2,57 +2,75 @@ const Deck = require('card-deck');
 const OhNoCard = require('./OhNoCard').default;
 const OhNoPlayer = require('./OhNoPlayer').default;
 const OhNoScore = require('./OhNoScore').default;
-const DECKDATA = require('./OhNoDeckData');
+const OhNoDeckData = require('./OhNoDeckData').default;
 const UTILS = require('./OhNoUtils');
 
-const repeatFunction = (fn, times) => {
-    for (let i = 0; i < times; i++) {
-        fn();
+const ohNoDeckDataConfig = {
+    RANK_0: `MOUSE`,
+    RANK_1: `BIRD`,
+    RANK_2: `BUNNY`,
+    RANK_3: `BASS`,
+    RANK_4: `CAT`,
+    RANK_5: `DOG`,
+    RANK_6: `SHEEP`,
+    RANK_7: `DEER`,
+    RANK_8: `PIG`,
+    RANK_9: `COW`,
+    RANK_SKIP: 'GRIFFIN',
+    RANK_REVERSE: 'TROLL',
+    RANK_DRAW_2: 'WYVERN',
+    RANK_WILD: 'MAGIC',
+    RANK_WILD_DRAW_4: 'DRAGON',
+
+    RANK_ALIASES: {
+        'MOUSE': [`RAT`, `RODENT`],
+        'BIRD': [`BIRB`, `AVIAN`, `FLAPFLAP`, `FLAPPY`, `FLAPPER`],
+        'BUNNY': [`RABBIT`, `LAPINE`],
+        'BASS': [`FISH`, `FISHY`, `FISHIE`],
+        'CAT': [`FELINE`, `PUSSY`, `PUSS`, `KITTY`, `KITTY CAT`],
+        'DOG': [`CANINE`, `PUPPO`, `PUP`, `WOOF`, `WOOFER`, `BOOF`, `BOOFER`, `DOGGO`],
+        'PIG': [`HOG`, `SOW`],
+        'COW': [`BULL`],
+        'GRIFFIN': [`GRIFFON`, `GRYPHON`, `GRIFF`, `GRYPH`],
+        'WYVERN': [`DRAKE`],
+        'MAGIC': [`MAGIC SPELL`, `SPELL`, `INCANTATION`, `HEX`, `CHARM`],
+        'DRAGON': [`WYRM`, `TROGDOR`, `ALDUIN`, `PAARTHURNAX`]
+    },
+
+    COLOR_0: `WHITE`,
+    COLOR_1: `BLONDE`,
+    COLOR_2: `BROWN`,
+    COLOR_3: `BLACK`,
+
+    COLOR_ALIASES: {
+        'BLONDE': [`BLOND`],
+        'BLACK': [`PURPLE`],
+        'WHITE': [`SNOWY`]
+    },
+
+    COLOR_MAP: {
+        'WHITE':  {outer: `purple`, inner: 'white'},
+        'BLONDE': {outer: `purple`, inner: 'yellow'},
+        'BROWN': {outer: `purple`, inner: 'brown'},
+        'BLACK': {outer: `purple`, inner: 'purple'},
+    },
+
+    CARD_NAME_ALIASES: {
+        'BROWN BUNNY': [`ELLEN`, `ELLEN STRAND`, `STRAND`, `ELLIE`, `ELLIE STRAND`],
+        'WHITE BUNNY': [`CAITLYN`, `DANIEL`, `GREYIERS`, `CAITLYN GREYIERS`, `DANIEL GREYIERS`],
+        'WHITE MOUSE': [`NIPPERKIN`, `QAYA`, `LAB RAT`, `LABRAT`],
+        'BLONDE DOG': [`DANAE`, `FANG`, `FANGCANINE`],
+        'BROWN COW': [`HOW NOW`],
+        'BLACK SHEEP': [`BAA BAA`, `BAH BAH`]
     }
-}
-
-const makeNumberCards = () => {
-    let results = [];
-    DECKDATA.COLORS.forEach(color => {
-        DECKDATA.NUMBER_RANKS.forEach((rank, i) => {
-            let name = `${color.toLowerCase()} ${rank.toLowerCase()} (${i})`;
-            repeatFunction(() => results.push(new OhNoCard(rank, i, color, name)), i === 0 ? 1 : 2);
-        });
-    })
-    return results;
-}
-
-const makeActionCards = () => {
-    let results = [];
-    DECKDATA.COLORS.forEach(color => {
-        DECKDATA.ACTION_RANKS.forEach(rank => {
-            repeatFunction(() => results.push(new OhNoCard(rank, 20, color, `${color.toLowerCase()} ${rank.toLowerCase()}`)), 2);
-        });
-    })
-    return results;
-}
-
-const makeWildCards = () => {
-    let results = [];
-    DECKDATA.WILD_RANKS.forEach(rank => {
-        repeatFunction(() => results.push(new OhNoCard(rank, 50)), 4);
-    });
-    return results;
-}
-
-const makeMatcher = () => {
-    let colors = [...DECKDATA.COLORS, 'BLOND'].join('|');
-    let ranks = [...DECKDATA.NUMBER_RANKS, ...DECKDATA.ACTION_RANKS].join('|');
-    let wildRanks = DECKDATA.WILD_RANKS.join('|');
-    //return new RegExp(`(?<cardname>(?:${colors}) (?:${ranks})|(?:WILD(?: BREED 4)*))(?: *(?<wildcolor>${colors})*)(?: *(?<shout>!*SHOUT)*)`, `gi`);
-    const regstr = `(?<cardname>((?:BLACK|WHITE|BLONDE*|BROWN) (?:MOUSE|BIRD|BUNNY|BASS|CAT|DOG|SHEEP|DEER|PIG|COW|SKIP|REVERSE|BREED 2))|(?:WILD(?: BREED 4)*)|(?:caitlyn greyiers|daniel greyiers|greyiers|ellen strand|caitlyn|daniel|ellen|strand|danae|nipperkin))(?: (?<wildcolor>BLACK|WHITE|BLONDE*|BROWN))*(?: (?<shout>!*SHOUT))*`;
-    return new RegExp(regstr, `gi`);
 }
 
 module.exports.default = class OhNoGame {
     constructor() {
         this.deck;
         this.discards;
+        // TODO: allow players to swap out config
+        this.deckData = new OhNoDeckData(ohNoDeckDataConfig);
         // holds confirmed and unconfirmed players
         this.allPlayers = [];
         // holds confirmed players only once the game starts
@@ -76,54 +94,43 @@ module.exports.default = class OhNoGame {
     }
 
     parsePlay(args) {
-        let match = this.matcher.exec(args);
+        let match = this.deckData.matcher.exec(args);
         if (!match) {
             console.log(match);
-            this.matcher.lastIndex = 0;
+            this.deckData.matcher.lastIndex = 0;
             return match;
         }
         let response = {};
-        let friendsMap = {
-            'caitlyn': 'white bunny',
-            'daniel': 'white bunny',
-            'daniel greyiers': 'white bunny',
-            'caitlyn greyiers': 'white bunny',
-            'greyiers': 'white bunny',
-            'ellen': 'brown bunny',
-            'ellen strand': 'brown bunny',
-            'ellen strand': 'brown bunny',
-            'danae': 'blonde dog',
-            'nipperkin': 'white mouse',
-        }
-        let friendKeys = Object.keys(friendsMap);
         for (let group in match.groups) {
             let value = match.groups[group];
-            if (group === 'cardname') {
-                if(friendKeys.includes(value.toLowerCase())) {
-                    value = friendsMap[value.toLowerCase()];
-                } else {
-                    let words = value.split(' ');
-                    if (words.length > 1) {
-                        switch (words[0].toLowerCase()) {
-                            case 'blond': words[0] = 'blonde'; break;
+            if (value) value = value.toLowerCase();
+            console.log(group, value);
+            switch (group) {
+                case 'cardname':
+                    if (this.deckData.CARD_NAME_ALIASES[value]) {
+                        value = this.deckData.CARD_NAME_ALIASES[value];
+                    } else {
+                        let words = value.split(' ');
+                        if (words.length > 1) {
+                            console.log(words);
+                            console.log(this.deckData.RANK_ALIASES);
+                            if (this.deckData.COLOR_ALIASES[words[0]]) words[0] = this.deckData.COLOR_ALIASES[words[0]];
+                            if (this.deckData.RANK_ALIASES[words[1]]) words[1] = this.deckData.RANK_ALIASES[words[1]];
+                            value = words.join(' ');
                         }
-                        switch (words[1].toLowerCase()) {
-                            case 'rat': words[1] = 'mouse'; break;
-                            case 'fish': words[1] = 'bass'; break;
-                            case 'lapine': case 'rabbit': words[1] = 'bunny'; break;
-                            case 'feline': words[1] = 'cat'; break;
-                            case 'canine': words[1] = 'dog'; break;
-                        }
-                        value = words.join(' ');
                     }
-                }
-            } else if (group === 'wildcolor' && value !== undefined && value.toLowerCase() === 'blond') {
-                value = 'blonde';
-            } else if (group === 'shout' && value !== undefined && value.toLowerCase() === '!shout') value = 'shout';
+                    break;
+                case 'wildcolor':
+                    if (this.deckData.COLOR_ALIASES[value]) value = this.deckData.COLOR_ALIASES[value];
+                    break;
+                case 'shout':
+                    if (this.deckData.SHOUT_ALIASES.includes(value)) value = true;
+                    break;
+            }
             response[group] = value;
         }
         console.log(response);
-        this.matcher.lastIndex = 0;
+        this.deckData.matcher.lastIndex = 0;
         return response;
     }
 
@@ -155,7 +162,7 @@ module.exports.default = class OhNoGame {
 
     containsAllBots() {
         for (let i = 0; i < this.players.length; i++) {
-            if (this.players[i].isBot) return false;
+            if (!this.players[i].isBot) return false;
         }
         return true;
     }
@@ -180,7 +187,7 @@ module.exports.default = class OhNoGame {
         return true;
     }
 
-    addPlayer(name) {
+    addPlayer = (name) => {
         if (this.isInProgress && this.getApprovedPlayers().length >= this.config.maxPlayers) {
             console.log(`Unable to add ${name}, already at the maximum of ${this.config.maxPlayers} approved players.`);
             return false;
@@ -203,7 +210,7 @@ module.exports.default = class OhNoGame {
                 return false;
             }
         }
-        let player = new OhNoPlayer(name);
+        let player = new OhNoPlayer(name, this);
         this.allPlayers.push(player);
         return true;
     }
@@ -305,6 +312,41 @@ module.exports.default = class OhNoGame {
         this.startRound();
     }
 
+    makeDeck() {
+        const repeatFunction = (fn, times) => {
+            for (let i = 0; i < times; i++) {
+                fn();
+            }
+        }
+        const makeNumberCards = () => {
+            let results = [];
+            this.deckData.COLORS.forEach(color => {
+                this.deckData.NUMBER_RANKS.forEach((rank, i) => {
+                    let name = `${color.toLowerCase()} ${rank.toLowerCase()} (${i})`;
+                    repeatFunction(() => results.push(new OhNoCard(rank, i, color, name, this.deckData)), i === 0 ? 1 : 2);
+                });
+            })
+            return results;
+        }
+        const makeActionCards = () => {
+            let results = [];
+            this.deckData.COLORS.forEach(color => {
+                this.deckData.ACTION_RANKS.forEach(rank => {
+                    repeatFunction(() => results.push(new OhNoCard(rank, 20, color, `${color.toLowerCase()} ${rank.toLowerCase()}`, this.deckData)), 2);
+                });
+            })
+            return results;
+        }
+        const makeWildCards = () => {
+            let results = [];
+            this.deckData.WILD_RANKS.forEach(rank => {
+                repeatFunction(() => results.push(new OhNoCard(rank, 50, null, null, this.deckData)), 4);
+            });
+            return results;
+        }
+        return new Deck([...makeNumberCards(), ...makeActionCards(), ...makeWildCards()])
+    }
+
     startRound() {
         this.hasDrawnThisTurn = false;
         this.players.forEach(player => player.resetForRound());
@@ -314,8 +356,7 @@ module.exports.default = class OhNoGame {
         if (this.playerIndex >= this.players.length) this.playerIndex = 0;
         this.goingClockwise = true;
         this.currentDealer = this.players[this.dealerIndex];
-        this.matcher = makeMatcher();
-        this.deck = new Deck([...makeNumberCards(), ...makeActionCards(), ...makeWildCards()]);
+        this.deck = this.makeDeck();
         this.deck.shuffle();
         this.discards = new Deck();
         this.discards._stack = [];
@@ -369,7 +410,7 @@ module.exports.default = class OhNoGame {
     }
 
     handleDraw4() {
-        return `${UTILS.titleCase(DECKDATA.RANK_WILD_DRAW_4)} was played on ${this.currentPlayer.getName()}! Waiting for them to !accept or !challenge...`;
+        return `${UTILS.titleCase(this.deckData.RANK_WILD_DRAW_4)} was played on ${this.currentPlayer.getName()}! Waiting for them to !accept or !challenge...`;
     }
 
     acceptDraw4() {
@@ -395,8 +436,8 @@ module.exports.default = class OhNoGame {
 
     challengeDraw4() {
         let messages = [];
-        const d4name = UTILS.titleCase(DECKDATA.RANK_WILD_DRAW_4);
-        if (this.discards.top().rank === DECKDATA.RANK_WILD_DRAW_4) {
+        const d4name = UTILS.titleCase(this.deckData.RANK_WILD_DRAW_4);
+        if (this.discards.top().rank === this.deckData.RANK_WILD_DRAW_4) {
             if (!this.draw4LastTurn) {
                 messages.push(`${this.currentPlayer.getName()} tried to challenge the play, but the ${d4name} was not played on them.`);
                 return;
@@ -442,6 +483,7 @@ module.exports.default = class OhNoGame {
     }
 
     getSafestPlay(player = this.currentPlayer) {
+        //TODO: Randomize equal plays
         let safelyPlayDraw4 = this.isDraw4Legal(player, this.discards.top()).length === 0;
         let highestCard;
         for (let i = 0; i < player.hand.length; i++) {
@@ -449,8 +491,8 @@ module.exports.default = class OhNoGame {
             if (this.isCardPlayable(card)) {
                 if (!highestCard) {
                     highestCard = card;
-                } else if (card.score > highestCard) {
-                    if (card.rank !== DECKDATA.RANK_WILD_DRAW_4 || safelyPlayDraw4) {
+                } else if (card.score > highestCard.score) {
+                    if (card.rank !== this.deckData.RANK_WILD_DRAW_4 || safelyPlayDraw4) {
                         highestCard = card;
                     }
                 }
@@ -464,13 +506,14 @@ module.exports.default = class OhNoGame {
     }
 
     getHighestPlayableCard(player = this.currentPlayer) {
+        //TODO: Randomize equal plays
         let highestCard;
         for (let i = 0; i < player.hand.length; i++) {
             let card = player.hand[i];
             if (this.isCardPlayable(card)) {
                 if (!highestCard) {
                     highestCard = card;
-                } else if (player.hand[i].score > highestCard) {
+                } else if (player.hand[i].score > highestCard.score) {
                     highestCard = player.hand[i];
                 }
             }
@@ -483,7 +526,7 @@ module.exports.default = class OhNoGame {
         console.log(this.results);
     }
 
-    playCard(card, player, newWildColor, withShout = false) {
+    playCard = (card, player, newWildColor, withShout = false) => {
         this.players.forEach(player => player.isInShoutDanger = false);
         let messages = [];
         if (player) {
@@ -498,14 +541,14 @@ module.exports.default = class OhNoGame {
                 return false;
             }
             player.removeFromHand(player.hand.indexOf(card));
-            messages.push(`${player.getName()} played [b]${card.getName(true)}[/b]${card.isWild() ? ` and set the new color to [b][color=purple][color=${DECKDATA.COLOR_MAP[newWildColor.toLowerCase()]}]` + (UTILS.titleCase(newWildColor) + '[/color][/color][/b]') : ''}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
+            messages.push(`${player.getName()} played [b]${card.getName(true)}[/b]${card.isWild() ? ` and set the new color to [b]${this.deckData.applyBbcToColor(UTILS.titleCase(newWildColor))}[/b]` : ``}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
             if (card.isWild() && newWildColor !== null) this.wildColor = UTILS.titleCase(newWildColor);
             if (player.hand.length === 0) {
                 let nextPlayer = this.updatePlayerIndex(true);
-                if (card.rank === DECKDATA.RANK_WILD_DRAW_4) {
+                if (card.rank === this.deckData.RANK_WILD_DRAW_4) {
                     nextPlayer.addToHand(this.drawX(4));
                     messages.push(`${nextPlayer.getName()} had to draw 4 cards!`);
-                } else if (card.rank === DECKDATA.RANK_DRAW_2) {
+                } else if (card.rank === this.deckData.RANK_DRAW_2) {
                     nextPlayer.addToHand(this.drawX(2));
                     messages.push(`${nextPlayer.getName()} had to draw 2 cards!`);
                 }
@@ -519,8 +562,8 @@ module.exports.default = class OhNoGame {
             if (withShout) messages.push(this.shout(player));
         } else {
             messages.push(`${this.currentDealer.getName()} dealt [b]${card.getName(true)}[/b] as the starting card.`);
-            while (card.rank === DECKDATA.RANK_WILD_DRAW_4) {
-                messages.push(`Whoops, can't start the game with ${DECKDATA.RANK_WILD_DRAW_4}! Reshuffling the deck and dealing a new starting card...`);
+            while (card.rank === this.deckData.RANK_WILD_DRAW_4) {
+                messages.push(`Whoops, can't start the game with ${this.deckData.RANK_WILD_DRAW_4}! Reshuffling the deck and dealing a new starting card...`);
                 this.deck.addToTop(card);
                 this.deck.shuffle();
                 card = this.drawOne();
@@ -528,7 +571,7 @@ module.exports.default = class OhNoGame {
             }
         }
         this.discards.addToTop(card);
-        if (card.rank === DECKDATA.RANK_REVERSE) {
+        if (card.rank === this.deckData.RANK_REVERSE) {
             this.goingClockwise = !this.goingClockwise;
             let newDirection = 'right';
             let oldDirection = 'left';
@@ -536,24 +579,24 @@ module.exports.default = class OhNoGame {
                 newDirection = 'left';
                 oldDirection = 'right';
             }
-            messages.push(`${UTILS.titleCase(DECKDATA.RANK_REVERSE)}! Play now moves to the ${newDirection} instead of the ${oldDirection}.`);
+            messages.push(`${UTILS.titleCase(this.deckData.RANK_REVERSE)}! Play now moves to the ${newDirection} instead of the ${oldDirection}.`);
             if (!player || this.players.length === 2) {
                 this.playerIndex += 1; // offset to account for dealer being able to reverse to self AND for 2 player games
             }
         }
         this.updatePlayerIndex();
         let skip = false;
-        if (card.rank === DECKDATA.RANK_WILD_DRAW_4) {
+        if (card.rank === this.deckData.RANK_WILD_DRAW_4) {
             this.wildColor = UTILS.titleCase(newWildColor);
             this.draw4LastTurn = true;
             messages.push(this.handleDraw4());
             this.setResultsWithArray(messages);
             return true;
         } else {
-            if (card.rank === DECKDATA.RANK_SKIP) {
-                messages.push(`${UTILS.titleCase(DECKDATA.RANK_SKIP)}! ${this.currentPlayer.getName()} misses their turn.`);
+            if (card.rank === this.deckData.RANK_SKIP) {
+                messages.push(`${UTILS.titleCase(this.deckData.RANK_SKIP)}! ${this.currentPlayer.getName()} misses their turn.`);
                 skip = true;
-            } else if (card.rank === DECKDATA.RANK_DRAW_2) {
+            } else if (card.rank === this.deckData.RANK_DRAW_2) {
                 this.currentPlayer.addToHand(this.drawX(2));
                 messages.push(`Aw, ${this.currentPlayer.getName()} had to draw 2 and miss their turn.`);
                 skip = true;
@@ -584,7 +627,7 @@ module.exports.default = class OhNoGame {
         }
     }
 
-    endRound() {
+    endRound = () => {
         this.isRoundInProgress = false;
         let cards = [];
         let messages = [];
@@ -595,7 +638,7 @@ module.exports.default = class OhNoGame {
             cards.push(...player.hand);
             otherPlayerScores.push({name: player.getName(), total: player.score.getValue()});
         });
-        let score = new OhNoScore(cards);
+        let score = new OhNoScore(this.deckData, cards);
         this.currentPlayer.score.addScore(score);
         messages.push(`${this.currentPlayer.getName()} scored ${score.toString()}`);
         let totalScore = this.currentPlayer.score.getValue();
@@ -634,7 +677,7 @@ module.exports.default = class OhNoGame {
         this.endGame(this.players.filter(player => player.score.getValue() >= highestScore));
     }
 
-    endGame(winners) {
+    endGame (winners) {
         let str = '';
         if (winners.length > 0) {
             winners.sort((a, b) => b.score.getValue() - a.score.getValue());
@@ -649,7 +692,7 @@ module.exports.default = class OhNoGame {
             if (winners.length === 1) {
                 str += `\nWinning total: ${winners[0].score.toString()}`;
             } else {
-                let score = new OhNoScore();
+                let score = new OhNoScore(this.deckData);
                 str += `\nWinning totals:`;
                 winners.forEach(winner => {
                     score.addScore(winner.score);

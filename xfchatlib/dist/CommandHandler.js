@@ -15,9 +15,10 @@ class CommandHandler {
         }
     }
     processCommand(data) {
-        if (data && data.message && data.message.length > 2 && data.message[0] == '!') {
+        if (data && data.message && data.message.length >= 2 && data.message[0] == '!') {
+            let firstWord = String(data.message.split(' ')[0]);
             let opts = {
-                command: String(data.message.split(' ')[0]).replace('!', '').trim().toLowerCase(),
+                command: firstWord === undefined ? `` : firstWord.replace('!', '').trim().toLowerCase(),
                 argument: data.message.substring(String(data.message.split(' ')[0]).length).trim()
             };
             if (opts.command != "processCommand".toLowerCase()) {
@@ -138,24 +139,24 @@ class CommandHandler {
             this.fChatLibInstance.sendMessage('You don\'t have sufficient rights.', data.channel);
         }
     }
-    list(args, data) {
-        var userList = this.fChatLibInstance.getUserList(data.channel);
-        var str = "";
-        for (var i in userList) {
-            str += ", " + userList[i];
-        }
-        str = str.substr(1);
-        this.fChatLibInstance.sendMessage('Here are the current characters in the room:' + str, data.channel);
-    }
-    listops(args, data) {
-        let chatOPList = this.fChatLibInstance.getChatOPList(data.channel);
-        let str = "";
-        for (let i in chatOPList) {
-            str += ", " + chatOPList[i];
-        }
-        str = str.substr(1);
-        this.fChatLibInstance.sendMessage('Here are the current operators in the room:' + str, data.channel);
-    }
+    // list(args, data) {
+    //     var userList = this.fChatLibInstance.getUserList(data.channel);
+    //     var str="";
+    //     for(var i in userList){
+    //         str += ", "+userList[i];
+    //     }
+    //     str = str.substr(1);
+    //     this.fChatLibInstance.sendMessage('Here are the current characters in the room:'+str, data.channel);
+    // }
+    // listops(args, data) {
+    //     let chatOPList = this.fChatLibInstance.getChatOPList(data.channel);
+    //     let str="";
+    //     for(let i in chatOPList){
+    //         str += ", "+chatOPList[i];
+    //     }
+    //     str = str.substr(1);
+    //     this.fChatLibInstance.sendMessage('Here are the current operators in the room:'+str, data.channel);
+    // }
     loadplugin(args, data) {
         if (data.character == this.fChatLibInstance.config.master) {
             if (args == undefined || args == "") {
