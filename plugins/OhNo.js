@@ -520,7 +520,7 @@ class OhNo {
             if (length < 2) {
                 str += ` Waiting for at least two approved ready players before starting the ${roundOrGame}. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved ready player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
             } else if (length < this.game.getApprovedPlayers().length) {
-                str += ` ${length} out of ${this.game.players.length} approved players are ready.`;
+                str += ` ${length} out of ${this.game.isInProgress ? this.game.players.length : this.game.getApprovedPlayers.length} approved players are ready.`;
             } else {
                 if (this.game.isInProgress) {
                     this.game.startRound();

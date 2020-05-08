@@ -29,10 +29,12 @@ const defaultConfig = {
 class OhNoDeckData {
     constructor(config = defaultConfig) {
         this.NUMBER_RANKS = [];
+        this.SCORE_MAP = {};
         for (let i = 0; i < 10; i++) {
             let rank = config[`RANK_${i}`].toLowerCase();
             this[`RANK_${i}`] = rank;
             this.NUMBER_RANKS.push(rank);
+            this.SCORE_MAP[rank] = i;
         }
         this.RANK_SKIP = config.RANK_SKIP.toLowerCase();
         this.RANK_REVERSE = config.RANK_REVERSE.toLowerCase();
@@ -43,6 +45,9 @@ class OhNoDeckData {
         
         this.ACTION_RANKS = [this.RANK_SKIP, this.RANK_REVERSE, this.RANK_DRAW_2];
         this.WILD_RANKS = [this.RANK_WILD, this.RANK_WILD_DRAW_4];
+
+        this.ACTION_RANKS.forEach(rank => this.SCORE_MAP[rank] = 20);
+        this.WILD_RANKS.forEach(rank => this.SCORE_MAP[rank] = 50);
 
         this.COLORS = [];
         for (let i = 0; i < 4; i++) {
@@ -89,7 +94,11 @@ class OhNoDeckData {
         makeAliases(config.CARD_NAME_ALIASES, `CARD_NAME_ALIASES`);
         
         this.SHOUT_ALIASES = [`shout`, `s`, `yell`, `y`, `scream`];
-        const shouts = this.SHOUT_ALIASES.map(alias => `!*${alias}`).join(`|`);
+        let shouts = [];
+        this.SHOUT_ALIASES.forEach(alias => {
+            shouts.push(`!*${alias}`, alias);
+        });
+        shouts = shouts.join(`|`);
         const colors = [...this.COLORS, ...Object.keys(this.COLOR_ALIASES)].join(`|`);
         let ranks = [...this.NUMBER_RANKS, ...this.ACTION_RANKS];
         let wildRanks = [...this.WILD_RANKS];
@@ -105,7 +114,7 @@ class OhNoDeckData {
         ranks = ranks.join(`|`);
         wildRanks = wildRanks.join(`|`);
         let regstr = `(?<cardname>((?:${colors}) (?:${ranks}))|(?:${wildRanks})|(?:${cardNames}))(?: (?<wildcolor>${colors}))*(?: (?<shout>${shouts}))*`;
-        this.matcher = new RegExp(regstr);
+        this.matcher = new RegExp(regstr, `gi`);
     }
 
     isWild(rank) {
@@ -113,9 +122,7 @@ class OhNoDeckData {
     }
 
     getScore(rank) {
-        if (this.NUMBER_RANKS.includes(rank)) return parseInt(rank);
-        if (this.ACTION_RANKS.includes(rank)) return 20;
-        if (this.WILD_RANKS.includes(rank)) return 50;
+        return this.SCORE_MAP[rank];
     }
 
     applyBbcToColor(color) {

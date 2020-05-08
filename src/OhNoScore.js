@@ -15,11 +15,11 @@ class OhNoScore {
     }
 
     toString () {
-        let keys = Object.keys(this);
-        keys.sort((a, b) => this.deckData.getScore([a]) - this.deckData.getScore([b]));
+        let keys = Object.keys(this.score);
+        keys.sort((a, b) => this.deckData.getScore(a) - this.deckData.getScore(b));
         let entries = [];
         keys.forEach(key => {
-            let points = this.deckData.getScore([key.toLowerCase()]);
+            let points = this.deckData.getScore(key.toLowerCase());
             entries.push(`${this.score[key]}x ${UTILS.titleCase(key)} (${points} point${points === 1 ? `` : `s`})`);
         });
         return `${this.getValue()} points${entries.length > 0 ? `: ${entries.join(', ')}` : ``}.`;
@@ -27,14 +27,14 @@ class OhNoScore {
 
     getValue () {
         return Object.keys(this.score).reduce((value, key) => {
-            return value + (this.score[key] * this.deckData.getScore([key.toLowerCase()]));
+            return value + (this.score[key] * this.deckData.getScore(key.toLowerCase()));
         }, 0);
     }
     
-    addScore(score) {
-        Object.keys(score).forEach(key => {
+    addScore(ohNoScore) {
+        Object.keys(ohNoScore.score).forEach(key => {
             if (!this.score[key]) this.score[key] = 0;
-            this.score[key] += score[key];
+            this.score[key] += ohNoScore.score[key];
         });
     }
 }

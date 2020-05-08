@@ -23,13 +23,13 @@ const ohNoDeckDataConfig = {
     RANK_WILD_DRAW_4: 'DRAGON',
 
     RANK_ALIASES: {
-        'MOUSE': [`RAT`, `RODENT`],
-        'BIRD': [`BIRB`, `AVIAN`, `FLAPFLAP`, `FLAPPY`, `FLAPPER`],
+        'MOUSE': [`RAT`, `RODENT`, `MOUSEY`, `MOUSY`, `SQUEAKER`],
+        'BIRD': [`BIRB`, `AVIAN`, `FLAPFLAP`, `FLAPPY`, `FLAPPER`, `BIRDY`, `BIRDIE`, `CHIRPCHIRP`],
         'BUNNY': [`RABBIT`, `LAPINE`],
         'BASS': [`FISH`, `FISHY`, `FISHIE`],
         'CAT': [`FELINE`, `PUSSY`, `PUSS`, `KITTY`, `KITTY CAT`],
-        'DOG': [`CANINE`, `PUPPO`, `PUP`, `WOOF`, `WOOFER`, `BOOF`, `BOOFER`, `DOGGO`],
-        'PIG': [`HOG`, `SOW`],
+        'DOG': [`CANINE`, `PUPPO`, `PUP`, `WOOF`, `WOOFER`, `BOOF`, `BOOFER`, `DOGGO`, `DOGGY`],
+        'PIG': [`HOG`, `SOW`, `PIGGY`],
         'COW': [`BULL`],
         'GRIFFIN': [`GRIFFON`, `GRYPHON`, `GRIFF`, `GRYPH`],
         'WYVERN': [`DRAKE`],
@@ -80,6 +80,7 @@ module.exports.default = class OhNoGame {
         this.playerIndex;
         this.goingClockwise;
         this.wildColor;
+        this.previousWildColor;
         this.isInProgress = false;
         this.draw4LastTurn;
         this.results;
@@ -425,9 +426,10 @@ module.exports.default = class OhNoGame {
         for (let i = 0; i < player.hand.length; i++) {
             let card = player.hand[i];
             if (card.isWild()) continue;
-            if (oldCard.isWild() && (this.wildColor === null || card.color.toLowerCase() === this.wildColor.toLowerCase())) {
-                offendingCards.push(card);
-            } else if (card.color === oldCard.color) {
+            // if (oldCard.isWild() && (this.wildColor === null || card.color.toLowerCase() === oldCard.wildColor.toLowerCase())) {
+            //     offendingCards.push(card);
+            // } else
+            if (card.color === oldCard.color) {
                 offendingCards.push(card);
             }
         }
@@ -471,7 +473,7 @@ module.exports.default = class OhNoGame {
                 break;
             }
         }
-        if (playerInDanger === null) return `No players are in danger; players can only be called out when they have 1 card left in their hand after their turn and the next player has not yet taken a turn.`;
+        if (playerInDanger === null) return `${player.getName()} shouted, but no one was in danger.`;
         if (player.isInShoutDanger) {
             player.hasShouted = true;
             player.isInShoutDanger = false;
@@ -542,7 +544,11 @@ module.exports.default = class OhNoGame {
             }
             player.removeFromHand(player.hand.indexOf(card));
             messages.push(`${player.getName()} played [b]${card.getName(true)}[/b]${card.isWild() ? ` and set the new color to [b]${this.deckData.applyBbcToColor(UTILS.titleCase(newWildColor))}[/b]` : ``}, ${player.hand.length} card${player.hand.length !== 1 ? 's' : ''} left in their hand.`);
-            if (card.isWild() && newWildColor !== null) this.wildColor = UTILS.titleCase(newWildColor);
+            if (card.isWild() && newWildColor !== null) {
+                //this.wildColor = UTILS.titleCase(newWildColor);
+                this.wildColor = newWildColor.toLowerCase();
+                card.color = this.wildColor;
+            }
             if (player.hand.length === 0) {
                 let nextPlayer = this.updatePlayerIndex(true);
                 if (card.rank === this.deckData.RANK_WILD_DRAW_4) {
@@ -587,7 +593,9 @@ module.exports.default = class OhNoGame {
         this.updatePlayerIndex();
         let skip = false;
         if (card.rank === this.deckData.RANK_WILD_DRAW_4) {
-            this.wildColor = UTILS.titleCase(newWildColor);
+            //this.wildColor = UTILS.titleCase(newWildColor);
+            this.wildColor = newWildColor.toLowerCase();
+            card.color = this.wildColor;
             this.draw4LastTurn = true;
             messages.push(this.handleDraw4());
             this.setResultsWithArray(messages);

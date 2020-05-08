@@ -2,11 +2,15 @@
 require('dotenv').config();
 let FChatLib = require('./xfchatlib').default;
 let botPlugin = require('./plugins/OhNo').CommandHandler;
-let OhNoGame = require('./src/OhNoGame').default;
 
 // cd xfchatlib/ && npm install && cd .. && npm start
-
+// let OhNoGame = require('./src/OhNoGame').default;
+// let OhNoScore = require('./src/OhNoScore').default;
 // let game = new OhNoGame();
+// // game.deck = game.makeDeck();
+// // let score = new OhNoScore(game.deckData, game.drawX(5));
+// // console.log(score.toString());
+// // return;
 // let names = ['Oney', 'Twoey', 'Threey', 'Fourey', 'Fivey', 'Sixy', 'Seveny', 'Eighty', 'Niney', 'Tenny'];
 // const numOfPlayers = 4;
 // for (let i = 0; i < numOfPlayers; i++) {
