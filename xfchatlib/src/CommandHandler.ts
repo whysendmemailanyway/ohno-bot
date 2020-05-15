@@ -34,22 +34,34 @@ export default class CommandHandler{
 
                 let found = false;
 
-                for(let plugin of this.pluginsLoaded){
-                    for (let command of this.commandHandlerHelper.internalGetAllFuncs(plugin.instantiatedPlugin)) {
+                let findCommandInObject = object => {
+                    for (let command of this.commandHandlerHelper.internalGetAllFuncs(object)) {
                         if(command === opts.command){
-                            plugin.instantiatedPlugin[opts.command](opts.argument, data);
+                            object[opts.command](opts.argument, data);
                             found = true;
                             break;
                         }
                     }
+                }
+
+                for(let plugin of this.pluginsLoaded){
+                    findCommandInObject(plugin.instantiatedPlugin);
+                    // for (let command of this.commandHandlerHelper.internalGetAllFuncs(plugin.instantiatedPlugin)) {
+                    //     if(command === opts.command){
+                    //         plugin.instantiatedPlugin[opts.command](opts.argument, data);
+                    //         found = true;
+                    //         break;
+                    //     }
+                    // }
                     if (plugin.instantiatedPlugin.aliases && !found){
-                        for (let command of this.commandHandlerHelper.internalGetAllFuncs(plugin.instantiatedPlugin.aliases)) {
-                            if(command === opts.command) {
-                                plugin.instantiatedPlugin.aliases[opts.command](opts.argument, data);
-                                found = true;
-                                break;
-                            }
-                        }
+                        findCommandInObject(plugin.instantiatedPlugin.aliases);
+                        // for (let command of this.commandHandlerHelper.internalGetAllFuncs(plugin.instantiatedPlugin.aliases)) {
+                        //     if(command === opts.command) {
+                        //         plugin.instantiatedPlugin.aliases[opts.command](opts.argument, data);
+                        //         found = true;
+                        //         break;
+                        //     }
+                        // }
                     }
                 }
 

@@ -5,11 +5,21 @@ class OhNoHelper {
         this.fChatClient = fChatClient;
         this.game = game;
         this.channel = channel;
+        this.timeouts = {};
+        this.timeoutId = 0;
     }
 
     msgUser = (text, username) => {
         // TODO: if any output exceeds the character limit, break it into multiple posts separated by 1 second each.
         this.fChatClient.sendPrivMessage(text, username);
+    }
+    
+    stripBbc = (text) => {
+        return text.replace(/\[.*?\]/gi, '');
+    }
+
+    washInput = (text) => {
+        return this.stripBbc(text);
     }
 
     isUserMaster = (data) => {
@@ -60,14 +70,27 @@ class OhNoHelper {
 
     getTurnOutput = (player) => {
         let privateString = `[b]Current game: ${this.fChatClient.channels.get(this.channel).channelTitle}[/b]\n`;
-        privateString += `The top discard is [b]${this.game.discards.top().getName(true)}[/b]${this.game.discards.top().isWild() ? `, the wild color is [b]${this.game.deckData.applyBbcToColor(this.game.wildColor)}[/b]` : ``}. Your hand:\n`;
+        privateString += `The top discard is [b]${this.game.discards.top().getName(true)}[/b]${this.game.discards.top().isWild() ? `, the wild color is [b]${this.game.wildColor ? this.game.deckData.applyBbcToColor(this.game.wildColor) : `up to you!`}[/b]` : ``}. Your hand:\n`;
         privateString += `    ${player.handToString(true, this.game.isCardPlayable)}\n\n`;
         return privateString;
     }
 
+    setAndTrackTimeout = (callback, time) => {
+        let timeoutId = this.timeoutId++;
+        this.timeouts[timeoutId] = setTimeout(() => {
+            delete this.timeouts[timeoutId];
+            callback();
+        }, time);
+    }
+
+    shutdown = () => {
+        Object.keys(this.timeouts).forEach(key => clearTimeout(this.timeouts[key]));
+        this.timeouts = {};
+    }
+
     doBotTurn = async (callback) => {
         if (!this.game.isRoundInProgress) return;
-        setTimeout(() => {
+        this.setAndTrackTimeout(() => {
             if (!this.game.isRoundInProgress) return;
             callback();
         }, this.game.config.botTurnTime * 1000);
@@ -85,7 +108,7 @@ class OhNoHelper {
             let bots = this.game.players.filter(player => player.isBot);
             for (let i = 0; i < bots.length; i++) {
                 if (Math.floor(Math.random() * 100) % 6 === 0) {
-                    setTimeout(() => {
+                    this.setAndTrackTimeout(() => {
                         if (!this.game.isRoundInProgress) return;
                         this.msgRoom(this.game.shout(bots[i]), this.channel);
                     }, this.game.config.botTurnTime + (Math.random() * (this.game.config.botTurnTime - this.fChatClient.floodLimit) * 1000));
@@ -104,13 +127,25 @@ class OhNoHelper {
             str = `${this.game.results}\n\n`
             if (this.game.isInProgress) {
                 if (this.game.containsAllBots()) {
-                    str += `The round is over. The game consists of bots only; please use the !start command to start the next round.`;
+                    if (this.game.config.autoPlay === 1) {
+                        str += `The round is over, but autoplay is enabled. Starting the next round...`;
+                        this.game.startRound();
+                        str += `\n[b]A new round has begun![/b]\n\n${this.promptCurrentPlayer()}`;
+                    } else {
+                        str += `The round is over. The game consists of bots only; please use the !start command to start the next round.`;
+                    }
                 } else {
                     str += `The round is over. Use !ready to ready up for the next round. Round begins when all approved players are ready.`;
                 }
             } else {
                 if (this.game.containsAllBots()) {
-                    str += `The game is over. The game consists of bots only; please use the !start command to start the next game.`;
+                    if (this.game.config.autoPlay === 1) {
+                        str += `The game is over, but autoplay is enabled. Starting the next game...`;
+                        this.game.startGame();
+                        str += `\n[b]A new game has begun![/b]\n${this.promptCurrentPlayer()}`;
+                    } else {
+                        str += `The game is over. The game consists of bots only; please use the !start command to start the next game.`;
+                    }
                 } else {
                     str += `The game is over, thanks for playing! Use !ready to ready up for the next game. Game begins when all approved players are ready.`;
                 }
@@ -146,7 +181,7 @@ class OhNoHelper {
                 privateString += `See the "How to Play" and "Commands for playing" sections on my profile for more information.`;
             }
             str += `PM'ing them with their hand... `;
-            setTimeout(() => {
+            this.setAndTrackTimeout(() => {
                 this.msgUser(privateString, player.getName());
             }, this.fChatClient.floodLimit * 1000);
             str = str.substring(0, str.length - 1);
@@ -189,7 +224,6 @@ class OhNoHelper {
                             this.msgRoom(`${name} drew a card.`, this.channel);
                             this.promptCurrentPlayer(true);
                         });
-                    } else {
                         if (!this.game.canPlayerPlay()) {
                             this.doBotTurn(() => {
                                 this.game.pass();
@@ -197,8 +231,24 @@ class OhNoHelper {
                                 this.checkForVictory(true);
                             });
                             //str += `${name} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`;
+                        } else {
+                            play = getPlay();
+                            this.doBotTurn(() => {
+                                this.game.playCard(play.card, player, play.wildColor, play.withShout);
+                                this.checkForVictory(true);
+                            });
                         }
-                    }
+                    } 
+                    // else {
+                    //     if (!this.game.canPlayerPlay()) {
+                    //         this.doBotTurn(() => {
+                    //             this.game.pass();
+                    //             this.msgRoom(`${name} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`, this.channel);
+                    //             this.checkForVictory(true);
+                    //         });
+                    //         //str += `${name} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`;
+                    //     }
+                    // }
                 } else {
                     this.doBotTurn(() => {
                         this.game.playCard(play.card, player, play.wildColor, play.withShout);

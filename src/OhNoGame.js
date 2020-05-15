@@ -24,17 +24,20 @@ const ohNoDeckDataConfig = {
 
     RANK_ALIASES: {
         'MOUSE': [`RAT`, `RODENT`, `MOUSEY`, `MOUSY`, `SQUEAKER`],
-        'BIRD': [`BIRB`, `AVIAN`, `FLAPFLAP`, `FLAPPY`, `FLAPPER`, `BIRDY`, `BIRDIE`, `CHIRPCHIRP`],
-        'BUNNY': [`RABBIT`, `LAPINE`],
-        'BASS': [`FISH`, `FISHY`, `FISHIE`],
+        'BIRD': [`BIRB`, `AVIAN`, `FLAPFLAP`, `FLAPPY`, `FLAPPER`, `BIRDY`, `BIRDIE`, `CHIRPCHIRP`, `FLAP`],
+        'BUNNY': [`RABBIT`, `LAPINE`, `BUN`, `BUNBUN`, `BUNNEH`],
+        'BASS': [`FISH`, `FISHY`, `FISHIE`, `FEESH`],
         'CAT': [`FELINE`, `PUSSY`, `PUSS`, `KITTY`, `KITTY CAT`],
         'DOG': [`CANINE`, `PUPPO`, `PUP`, `WOOF`, `WOOFER`, `BOOF`, `BOOFER`, `DOGGO`, `DOGGY`],
-        'PIG': [`HOG`, `SOW`, `PIGGY`],
-        'COW': [`BULL`],
+        'SHEEP': [`LAMB`, `LAMBCHOP`],
+        'DEER': [`DURR`],
+        'PIG': [`HOG`, `SOW`, `PIGGY`, `OINK`, `OINKER`, `OINKOINK`, `THE OTHER WHITE MEAT`, `BACON`, `HAM`, `PORK`],
+        'COW': [`BULL`, `MOO`, `MOOMOO`, `UDDERS`],
         'GRIFFIN': [`GRIFFON`, `GRYPHON`, `GRIFF`, `GRYPH`],
+        'TROLL': [`TWOLL`],
         'WYVERN': [`DRAKE`],
-        'MAGIC': [`MAGIC SPELL`, `SPELL`, `INCANTATION`, `HEX`, `CHARM`],
-        'DRAGON': [`WYRM`, `TROGDOR`, `ALDUIN`, `PAARTHURNAX`]
+        'MAGIC': [`MAGIC SPELL`, `MAGIC THE GATHERING`, `SPELL`, `INCANTATION`, `HEX`, `CHARM`],
+        'DRAGON': [`WYRM`, `TROGDOR`, `ALDUIN`, `PAARTHURNAX`, `DRAGGUM`, `DRAGGY`, `DURG`]
     },
 
     COLOR_0: `WHITE`,
@@ -43,25 +46,34 @@ const ohNoDeckDataConfig = {
     COLOR_3: `BLACK`,
 
     COLOR_ALIASES: {
-        'BLONDE': [`BLOND`],
-        'BLACK': [`PURPLE`],
-        'WHITE': [`SNOWY`]
+        'BLONDE': [`BLOND`, `YELLOW`, `YELLER`, `YELLA`, `CHINAMAN`, `CHINAMEN`, `ASIAN`, `JAP`, `JAPANESE`, `YEWWOW`],
+        'BLACK': [`PURPLE`, `NEGRO`, `BWACK`],
+        'WHITE': [`SNOWY`, `BLANCO`, `CRACKER`, `JIZZ`, `SPUNK`, `SEMEN`, `CUM`],
+        'BROWN': [`TAN`, `MEXICAN`, `INDIAN`, `SHIT`, `CRAP`, `BWOWN`]
     },
 
     COLOR_MAP: {
         'WHITE':  {outer: `purple`, inner: 'white'},
         'BLONDE': {outer: `purple`, inner: 'yellow'},
         'BROWN': {outer: `purple`, inner: 'brown'},
-        'BLACK': {outer: `purple`, inner: 'purple'},
+        'BLACK': {outer: `purple`, inner: 'purple'}
     },
 
     CARD_NAME_ALIASES: {
         'BROWN BUNNY': [`ELLEN`, `ELLEN STRAND`, `STRAND`, `ELLIE`, `ELLIE STRAND`],
-        'WHITE BUNNY': [`CAITLYN`, `DANIEL`, `GREYIERS`, `CAITLYN GREYIERS`, `DANIEL GREYIERS`],
-        'WHITE MOUSE': [`NIPPERKIN`, `QAYA`, `LAB RAT`, `LABRAT`],
+        'WHITE BUNNY': [`CAITLYN`, `DANIEL`, `GREYIERS`, `CAITLYN GREYIERS`, `DANIEL GREYIERS`, `LITELAN`],
+        'WHITE MOUSE': [`NIPPERKIN`, `LAB RAT`, `LABRAT`],
         'BLONDE DOG': [`DANAE`, `FANG`, `FANGCANINE`],
         'BROWN COW': [`HOW NOW`],
-        'BLACK SHEEP': [`BAA BAA`, `BAH BAH`]
+        'BLACK SHEEP': [`BAA BAA`, `BAH BAH`],
+        'BLACK CAT': [`JUNGLE FEVER`],
+        'BLACK BIRD': [`CROW`, `RAVEN`, `NEVERMORE`],
+        'YELLOW BIRD': [`CANARY`, `FEATHY`],
+        'YELLOW BASS': [`GOLDFISH`]
+    },
+
+    WILD_PLAY_ALIASES: {
+        'MAGIC BLACK': [`MORGAN FREEMAN`]
     }
 }
 
@@ -90,49 +102,13 @@ module.exports.default = class OhNoGame {
             startingHandSize: 7,
             targetScore: 500,
             maxPlayers: 10,
-            botTurnTime: 7
+            botTurnTime: 7,
+            autoPlay: 0
         }
     }
 
     parsePlay(args) {
-        let match = this.deckData.matcher.exec(args);
-        if (!match) {
-            console.log(match);
-            this.deckData.matcher.lastIndex = 0;
-            return match;
-        }
-        let response = {};
-        for (let group in match.groups) {
-            let value = match.groups[group];
-            if (value) value = value.toLowerCase();
-            console.log(group, value);
-            switch (group) {
-                case 'cardname':
-                    if (this.deckData.CARD_NAME_ALIASES[value]) {
-                        value = this.deckData.CARD_NAME_ALIASES[value];
-                    } else {
-                        let words = value.split(' ');
-                        if (words.length > 1) {
-                            console.log(words);
-                            console.log(this.deckData.RANK_ALIASES);
-                            if (this.deckData.COLOR_ALIASES[words[0]]) words[0] = this.deckData.COLOR_ALIASES[words[0]];
-                            if (this.deckData.RANK_ALIASES[words[1]]) words[1] = this.deckData.RANK_ALIASES[words[1]];
-                            value = words.join(' ');
-                        }
-                    }
-                    break;
-                case 'wildcolor':
-                    if (this.deckData.COLOR_ALIASES[value]) value = this.deckData.COLOR_ALIASES[value];
-                    break;
-                case 'shout':
-                    if (this.deckData.SHOUT_ALIASES.includes(value)) value = true;
-                    break;
-            }
-            response[group] = value;
-        }
-        console.log(response);
-        this.deckData.matcher.lastIndex = 0;
-        return response;
+        return this.deckData.parsePlay(args);
     }
 
     parseProp(property) {

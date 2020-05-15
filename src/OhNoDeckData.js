@@ -92,6 +92,7 @@ class OhNoDeckData {
         makeAliases(rankAliasesInput, `RANK_ALIASES`);
         makeAliases(config.COLOR_ALIASES, `COLOR_ALIASES`);
         makeAliases(config.CARD_NAME_ALIASES, `CARD_NAME_ALIASES`);
+        makeAliases(config.WILD_PLAY_ALIASES, `WILD_PLAY_ALIASES`);
         
         this.SHOUT_ALIASES = [`shout`, `s`, `yell`, `y`, `scream`];
         let shouts = [];
@@ -99,7 +100,7 @@ class OhNoDeckData {
             shouts.push(`!*${alias}`, alias);
         });
         shouts = shouts.join(`|`);
-        const colors = [...this.COLORS, ...Object.keys(this.COLOR_ALIASES)].join(`|`);
+        const colors = [...this.COLORS, ...Object.keys(this.COLOR_ALIASES)].sort((a, b) => b.length - a.length).join(`|`);
         let ranks = [...this.NUMBER_RANKS, ...this.ACTION_RANKS];
         let wildRanks = [...this.WILD_RANKS];
         let cardNames = [...Object.keys(this.CARD_NAME_ALIASES)].sort((a, b) => b.length - a.length).join(`|`);
@@ -111,8 +112,8 @@ class OhNoDeckData {
                 ranks.push(alias);
             }
         })
-        ranks = ranks.join(`|`);
-        wildRanks = wildRanks.join(`|`);
+        ranks = ranks.sort((a, b) => b.length - a.length).join(`|`);
+        wildRanks = wildRanks.sort((a, b) => b.length - a.length).join(`|`);
         let regstr = `(?<cardname>((?:${colors}) (?:${ranks}))|(?:${wildRanks})|(?:${cardNames}))(?: (?<wildcolor>${colors}))*(?: (?<shout>${shouts}))*`;
         this.matcher = new RegExp(regstr, `gi`);
     }
@@ -128,6 +129,58 @@ class OhNoDeckData {
     applyBbcToColor(color) {
         let obj = this.COLOR_MAP[color.toLowerCase()];
         return `[color=${obj.outer}][color=${obj.inner}]${color}[/color][/color]`;
+    }
+
+    parsePlay(string) {
+        // is it possible to reference the match with replace..? doubt it...
+        //string = string.replace(wildNameAliases);
+        Object.keys(this.WILD_PLAY_ALIASES).forEach(alias => string = string.replace(new RegExp(alias, `gi`), this.WILD_PLAY_ALIASES[alias]));
+        let match = this.matcher.exec(string);
+        if (!match) {
+            console.log(match);
+            this.matcher.lastIndex = 0;
+            return match;
+        }
+        let response = {};
+        for (let group in match.groups) {
+            let value = match.groups[group];
+            if (value) value = value.toLowerCase();
+            // console.log(group, value);
+            switch (group) {
+                case 'cardname':
+                    if (this.CARD_NAME_ALIASES[value]) {
+                        value = this.CARD_NAME_ALIASES[value];
+                    } else {
+                        if (this.RANK_ALIASES[value]) {
+                            value = this.RANK_ALIASES[value];
+                        } else {
+                            let words = value.split(' ');
+                            // TODO: improve this to work with multiple Color words...
+                            // gotta detect the color match first... somehow. one word at a time I suppose...
+                            if (words.length > 1) {
+                                let colorWord = words[0];
+                                let rankWords = words.slice(1).join(' ');
+                                if (this.COLOR_ALIASES[colorWord]) colorWord = this.COLOR_ALIASES[colorWord];
+                                if (this.RANK_ALIASES[rankWords]) {
+                                    rankWords = this.RANK_ALIASES[rankWords];
+                                }
+                                value = colorWord + ' ' + rankWords;
+                            }
+                        }
+                    }
+                    break;
+                case 'wildcolor':
+                    if (this.COLOR_ALIASES[value]) value = this.COLOR_ALIASES[value];
+                    break;
+                case 'shout':
+                    if (this.SHOUT_ALIASES.includes(value)) value = true;
+                    break;
+            }
+            response[group] = value;
+        }
+        console.log(response);
+        this.matcher.lastIndex = 0;
+        return response;
     }
 }
 

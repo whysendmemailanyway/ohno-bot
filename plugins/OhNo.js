@@ -24,6 +24,9 @@ class OhNo {
             leave: this.leavegame,
             leaveg: this.leavegame,
 
+            sketch: this.draw,
+            doodle: this.draw,
+
             // TODO: list scores along with players if game is in progress; list active players separately from inactive/unapproved players
             list: this.listplayers,
             listp: this.listplayers,
@@ -35,7 +38,7 @@ class OhNo {
             
             //startg: this.startgame,
             // startr: this.startround,
-            s: this.shout,
+            //s: this.shout,
            
             stopgame: this.endgame,
             stopg: this.endgame,
@@ -164,11 +167,26 @@ class OhNo {
                     console.log(`There was an error getting or telling a joke...`);
                     console.log(error.message);
                 })
+            },
+            flip: (args, data) => {
+                this.helper.msgRoom(`/me SIGHS and sets the table upright again...`, data.channel);
             }
-        }
+        };
+        this.aliases.fatherwitticism = this.aliases.dadjoke;
+        this.aliases.papaquip = this.aliases.dadjoke;
+        this.aliases.fliptable = this.aliases.flip;
+        this.game.deckData.SHOUT_ALIASES.forEach(alias => {
+            if (this.aliases[alias] === undefined) this.aliases[alias] = this.shout;
+        });
+    }
+
+    shutdown = () => {
+        this.helper.shutdown;
+        this.game.endGame();
     }
 
     shortcuts = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs()) {
             this.helper.msgRoom(`The !shortcuts command shows aliases for existing commands. Permission: any. Usage: !shortcuts`, data.channel);
             return;
@@ -178,12 +196,13 @@ class OhNo {
             '!addbot: !addb.',
             '!challengeb4: !challenge.',
             '!configuregame: !confg.',
+            '!draw: !sketch, !doodle.',
             '!endgame: !stopgame, !stopg, !stop, !endg, !end.',
             '!joingame: !joing, !join.',
             '!leavegame: !leaveg, !leave.',
             '!listplayers: !listp, !list.',
             '!removeplayer: !removeplayers, !removep, !remp, !delp.',
-            '!shout: !s.',
+            `!shout: ${this.game.deckData.SHOUT_ALIASES.filter(alias => alias !== 'shout').map(alias => `!${alias}`).join(', ')}.`,
             '!shortcuts: !shortc, !scuts, !sc.',
             '!showhand: !hand',
             //'!startgame: !startg, !start.',
@@ -193,6 +212,7 @@ class OhNo {
     }
 
     showhand = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !showhand command is used to PM you your hand. Permission: any player who is in an active game. Usage: !showhand`, data.channel);
             return;
@@ -210,6 +230,7 @@ class OhNo {
     }
 
     acceptb4 = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !acceptb4 command is used when a Wild Breed 4 has been played on you and you do not wish to challenge it. Permission: any player who would have to draw 4 cards as a result of someone playing Wild Breed 4. Usage: !acceptb4`, data.channel);
             return;
@@ -230,6 +251,7 @@ class OhNo {
     }
 
     challengeb4 = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !challengeb4 command is used when you think a Wild Breed 4 has been played on you illegally (e.g, they could have played a non-wild card instead of the Wild Breed 4). Only the player who has to draw 4 cards can challenge the player who played it. If a player is challenged, they must reveal their hand; if any non-wild cards could have been played instead of the Wild Breed 4, the player who played the Wild Breed 4 must draw 4 cards, and the other player may take their turn. However, if they played the Wild Breed 4 legally, the player who challenged must draw 6 cards and miss their turn. Permission: any player who would have to draw 4 cards as a result of someone playing Wild Breed 4. Usage: !challengeb4`, data.channel);
             return;
@@ -253,6 +275,7 @@ class OhNo {
     // Timeouts are only active during a round.
 
     shout = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !shout command has two uses. If you played all but one card in your hand and forgot to shout when you played, you can use this command to shout. If someone else played all but one card in their hand and hasn't shouted yet, you can use this command (even if it is not your turn) before the next player takes their turn to force the player who forgot to shout to draw two cards. Permission: any player in the current game. Usage: !shout`, data.channel);
             return;
@@ -269,6 +292,7 @@ class OhNo {
     }
 
     play = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.insufficientArgs(args)) {
             this.helper.msgRoom(`The !play command is used to play a card. Permission: any (on your turn only). Usage: !play cardName [wildColor] [shout]`, data.channel);
             return;
@@ -309,6 +333,7 @@ class OhNo {
     }
 
     draw = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !draw command is used when it's your turn and you cannot or do not want to play a card from your hand. Permission: any (on your turn only). Usage: !draw`, data.channel);
             return;
@@ -332,6 +357,7 @@ class OhNo {
     }
 
     pass = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !pass command is used when it's your turn, you have already drawn a card this turn, and you cannot or do not want to play a card from your hand. Permission: any (on your turn only). Usage: !pass`, data.channel);
             return;
@@ -355,6 +381,7 @@ class OhNo {
     }
 
     configuregame = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.insufficientArgs(args)) {
             this.helper.msgRoom(`The !configuregame command is used to specify certain properties on the game object: startingHandSize, targetScore, and maxPlayers. These can be set at any time, even when a game is in progress, and setting targetScore below any player's current score will immediately end the game. Permission: OP only. Usage: !configuregame key1=value1, key2=value2, etc`, data.channel);
             return;
@@ -382,6 +409,7 @@ class OhNo {
     }
 
     addbot = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !addbot command adds a bot to the game. Permission: OP only. Usage: !addbot name 1[, name 2, etc]`, data.channel);
             return;
@@ -417,6 +445,7 @@ class OhNo {
     }
 
     joingame = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !joingame command does one of two things depending on whether a game is in progress. If the game is in progress, the user who entered this command replaces their botified self. If the game is not in progress, the user who entered this command is added to the game. If they are an OP, they will be approved automatically; otherwise, an OP must approve them before they can actually play. Usage: !joingame`, data.channel);
             return;
@@ -447,6 +476,7 @@ class OhNo {
     }
 
     approve = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.insufficientArgs(args)) {
             this.helper.msgRoom(`The !approve command approves one or more players. Players must first join the game, then be approved before they can play. Permission: OP only. Usage: !approve name1, name2, etc`, data.channel);
             return;
@@ -474,6 +504,7 @@ class OhNo {
     }
 
     leavegame = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !leavegame command removes the person who used it from the game. Permission: any. Usage: !leavegame`, data.channel);
             return;
@@ -501,6 +532,7 @@ class OhNo {
     }
 
     ready = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !ready command signifies that you are ready to start the next round. The next round starts when all players are ready. Permission: Any player who joined the game (including unapproved players, although only approved players will be able to play). Usage: !ready`, data.channel);
             return;
@@ -520,7 +552,7 @@ class OhNo {
             if (length < 2) {
                 str += ` Waiting for at least two approved ready players before starting the ${roundOrGame}. Currently, there ${length === 0 ? 'are no' : 'is only one'} approved ready player${length === 0 ? 's' : ''} in the game. Players can join the game with !joingame, and an OP can approve them with !approve.`;
             } else if (length < this.game.getApprovedPlayers().length) {
-                str += ` ${length} out of ${this.game.isInProgress ? this.game.players.length : this.game.getApprovedPlayers.length} approved players are ready.`;
+                str += ` ${length} out of ${this.game.isInProgress ? this.game.players.length : this.game.getApprovedPlayers().length} approved players are ready.`;
             } else {
                 if (this.game.isInProgress) {
                     this.game.startRound();
@@ -534,6 +566,7 @@ class OhNo {
     }
 
     start = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !start command begins a new game or round of OhNo with the current players. It is only necessary in a bots-only game; if any non-bot players are in the game, the next round or game will begin when everyone is !ready. Permission: OP only. Usage: !start`, data.channel);
             return;
@@ -613,6 +646,7 @@ class OhNo {
     // }
 
     endgame = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !endgame command ends the current game of OhNo. The player with the highest score is considered the winner. Permission: OP only. Usage: !endgame`, data.channel);
             return;
@@ -634,6 +668,7 @@ class OhNo {
     }
 
     removeplayer = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.insufficientArgs(args)) {
             this.helper.msgRoom(`The !removeplayer command does one of two things depending on whether a game is in progress. If the game is in progress, specified users are converted to bots. If the game is not in progress, specified users are removed from the game completely. Permission: OP only. Usage: !removeplayer name1, name2, etc`, data.channel);
             return;
@@ -660,6 +695,7 @@ class OhNo {
     }
 
     listplayers = (args, data) => {
+        args = this.helper.washInput(args);
         if (this.helper.helpArgs(args)) {
             this.helper.msgRoom(`The !listplayers command shows all players who are currently in the game. Permission: any. Usage: !listplayers`, data.channel);
             return;

@@ -4,9 +4,44 @@ let FChatLib = require('./xfchatlib').default;
 let botPlugin = require('./plugins/OhNo').CommandHandler;
 
 // cd xfchatlib/ && npm install && cd .. && npm start
-// let OhNoGame = require('./src/OhNoGame').default;
-// let OhNoScore = require('./src/OhNoScore').default;
-// let game = new OhNoGame();
+//let OhNoGame = require('./src/OhNoGame').default;
+//let game = new OhNoGame();
+
+// let OhNoHelper = require('./src/OhNoHelper').default;
+// let h = new OhNoHelper();
+// const msgRoom = (text, channel) => {
+//     // TODO: Make this divide the posts nicer -- never split BBCode or words (especially usernames; look for periods, commas, etc).
+//     let msgLength = 10;
+//     let maxTries = 12;
+//     while (text.length > 0) {
+//         let newText = text;
+//         if (text.length > msgLength) {
+    // spaces only is not going to cut it. gotta do bbcode, too. regular expressions?
+//             let cap = text.substring(0, msgLength).lastIndexOf(` `);
+//             let brokeOnSpace = false;
+//             if (cap <= 0) {
+//                 cap = text.length;
+//             } else {
+//                 brokeOnSpace = true;
+//             }
+//             newText = text.substring(0, cap);
+//             if (newText.length > msgLength) {
+//                 cap = msgLength;
+//                 newText = text.substring(0, cap);
+//             }
+//             text = text.substring(brokeOnSpace ? cap + 1 : cap);
+//         } else {
+//             text = '';
+//         }
+//         console.log(newText);
+//         maxTries--;
+//         if (maxTries <= 0) throw "fuck it";
+//         //this.fChatClient.sendMessage(newText, channel);        
+//     }
+// }
+
+// msgRoom('I ate twenty-four apples the other day and they were very yummy but they gave me a tummyache.');
+// return;
 // // game.deck = game.makeDeck();
 // // let score = new OhNoScore(game.deckData, game.drawX(5));
 // // console.log(score.toString());

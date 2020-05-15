@@ -76,7 +76,7 @@ class FChatLib {
         this.commandHandlers = [];
         //channels:Map<string, Array<IPlugin>> = new Map<string, Array<IPlugin>>();
         this.channels = new Map();
-        this.floodLimit = 1.0;
+        this.floodLimit = 1.5;
         // lastTimeCommandReceived:number = Number.MAX_VALUE;
         //lastTimeCommandReceived:number = 0;
         //commandsInQueue:number = 0;

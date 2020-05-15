@@ -290,7 +290,7 @@ export default class FChatLib implements IFChatLib{
 
     pingInterval:NodeJS.Timer;
 
-    floodLimit:number = 1.0;
+    floodLimit:number = 1.5;
     // lastTimeCommandReceived:number = Number.MAX_VALUE;
     //lastTimeCommandReceived:number = 0;
     //commandsInQueue:number = 0;

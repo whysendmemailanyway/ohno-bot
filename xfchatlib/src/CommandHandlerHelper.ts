@@ -72,8 +72,11 @@ export class CommandHandlerHelper{
     }
 
     internalUnloadPlugin(pluginName){
-        if(this.commandHandler.pluginsLoaded.findIndex(x => x.name == pluginName) == -1){
-            this.commandHandler.pluginsLoaded.splice(this.commandHandler.pluginsLoaded.findIndex(x => x.name == pluginName), 1);
+        let pluginIndex = this.commandHandler.pluginsLoaded.findIndex(x => x.name == pluginName);
+        if(pluginIndex !== -1){
+            let plugin = this.commandHandler.pluginsLoaded[pluginIndex]
+            if (plugin.instantiatedPlugin.shutdown) plugin.instantiatedPlugin.shutdown();
+            this.commandHandler.pluginsLoaded.splice(pluginIndex, 1);
             this.internalUpdatePluginsFile();
         }
     }
