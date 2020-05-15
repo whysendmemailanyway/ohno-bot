@@ -94,7 +94,7 @@ class OhNoDeckData {
         makeAliases(config.CARD_NAME_ALIASES, `CARD_NAME_ALIASES`);
         makeAliases(config.WILD_PLAY_ALIASES, `WILD_PLAY_ALIASES`);
         
-        this.SHOUT_ALIASES = [`shout`, `s`, `yell`, `y`, `scream`];
+        this.SHOUT_ALIASES = [`shout`, `s`, `yell`, `y`, `scream`, `screm`];
         let shouts = [];
         this.SHOUT_ALIASES.forEach(alias => {
             shouts.push(`!*${alias}`, alias);
@@ -142,10 +142,11 @@ class OhNoDeckData {
             return match;
         }
         let response = {};
+        console.log(`Parsing play from "${string}"...`);
         for (let group in match.groups) {
             let value = match.groups[group];
             if (value) value = value.toLowerCase();
-            // console.log(group, value);
+            console.log(group, value);
             switch (group) {
                 case 'cardname':
                     if (this.CARD_NAME_ALIASES[value]) {

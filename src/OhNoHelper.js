@@ -84,7 +84,11 @@ class OhNoHelper {
     }
 
     shutdown = () => {
-        Object.keys(this.timeouts).forEach(key => clearTimeout(this.timeouts[key]));
+        console.log(`Clearing ${Object.keys(this.timeouts).length} timeouts...`);
+        Object.keys(this.timeouts).forEach(key => {
+            console.log(`Clearing timeout ${this.timeouts[key]} from key ${key}...`);
+            clearTimeout(this.timeouts[key])
+        });
         this.timeouts = {};
     }
 
@@ -117,14 +121,14 @@ class OhNoHelper {
         }
     }
 
-    checkForVictory = (messageRoom=false) => {
+    checkForVictory = (messageRoom=false, startingStr = ``) => {
         let str = `Helper is broken!`;
         if (this.game.isRoundInProgress) {
             this.game.startTurn();
-            str = this.promptCurrentPlayer();
+            str = startingStr + this.promptCurrentPlayer();
             this.checkForShouts();
         } else {
-            str = `${this.game.results}\n\n`
+            str = startingStr + `${this.game.results}\n\n`
             if (this.game.isInProgress) {
                 if (this.game.containsAllBots()) {
                     if (this.game.config.autoPlay === 1) {
@@ -216,18 +220,24 @@ class OhNoHelper {
                     return play;
                 }
                 let play = getPlay();
-                console.log(play);
+                let obj = JSON.parse(JSON.stringify(play));
+                if (obj.card) obj.card.deckData = `[redacted for brevity]`;
+                console.log(obj);
                 if (!play.card || !this.game.isCardPlayable(play.card)) {
                     if (!this.game.hasDrawnThisTurn) {
+                        let str = ``;
                         this.doBotTurn(() => {
                             this.game.pass();
-                            this.msgRoom(`${name} drew a card.`, this.channel);
-                            this.promptCurrentPlayer(true);
+                            //this.msgRoom(`${name} drew a card.`, this.channel);
+                            str = `${name} drew a card. `;
+                            //this.promptCurrentPlayer(true);
                         });
                         if (!this.game.canPlayerPlay()) {
                             this.doBotTurn(() => {
                                 this.game.pass();
-                                this.msgRoom(`${name} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`, this.channel);
+                                //this.msgRoom(`${name} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`, this.channel);
+                                str += `${name} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`;
+                                this.msgRoom(str, this.channel);
                                 this.checkForVictory(true);
                             });
                             //str += `${name} passed their turn, ${player.hand.length} card${player.hand.length > 0 ? 's' : ''} in their hand.`;
@@ -235,7 +245,7 @@ class OhNoHelper {
                             play = getPlay();
                             this.doBotTurn(() => {
                                 this.game.playCard(play.card, player, play.wildColor, play.withShout);
-                                this.checkForVictory(true);
+                                this.checkForVictory(true, str);
                             });
                         }
                     } 

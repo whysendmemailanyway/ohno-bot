@@ -30,9 +30,9 @@ const ohNoDeckDataConfig = {
         'CAT': [`FELINE`, `PUSSY`, `PUSS`, `KITTY`, `KITTY CAT`],
         'DOG': [`CANINE`, `PUPPO`, `PUP`, `WOOF`, `WOOFER`, `BOOF`, `BOOFER`, `DOGGO`, `DOGGY`],
         'SHEEP': [`LAMB`, `LAMBCHOP`],
-        'DEER': [`DURR`],
+        'DEER': [`DURR`, `VENISON`],
         'PIG': [`HOG`, `SOW`, `PIGGY`, `OINK`, `OINKER`, `OINKOINK`, `THE OTHER WHITE MEAT`, `BACON`, `HAM`, `PORK`],
-        'COW': [`BULL`, `MOO`, `MOOMOO`, `UDDERS`],
+        'COW': [`BULL`, `MOO`, `MOOMOO`, `UDDERS`, `STEAK`, `BURGER`, `HAMBURGER`],
         'GRIFFIN': [`GRIFFON`, `GRYPHON`, `GRIFF`, `GRYPH`],
         'TROLL': [`TWOLL`],
         'WYVERN': [`DRAKE`],
@@ -46,7 +46,7 @@ const ohNoDeckDataConfig = {
     COLOR_3: `BLACK`,
 
     COLOR_ALIASES: {
-        'BLONDE': [`BLOND`, `YELLOW`, `YELLER`, `YELLA`, `CHINAMAN`, `CHINAMEN`, `ASIAN`, `JAP`, `JAPANESE`, `YEWWOW`],
+        'BLONDE': [`BLOND`, `YELLOW`, `YELLER`, `YELLA`, `CHINAMAN`, `CHINAMEN`, `ASIAN`, `JAP`, `JAPANESE`, `YEWWOW`, `GOLD`],
         'BLACK': [`PURPLE`, `NEGRO`, `BWACK`],
         'WHITE': [`SNOWY`, `BLANCO`, `CRACKER`, `JIZZ`, `SPUNK`, `SEMEN`, `CUM`],
         'BROWN': [`TAN`, `MEXICAN`, `INDIAN`, `SHIT`, `CRAP`, `BWOWN`]
@@ -68,8 +68,8 @@ const ohNoDeckDataConfig = {
         'BLACK SHEEP': [`BAA BAA`, `BAH BAH`],
         'BLACK CAT': [`JUNGLE FEVER`],
         'BLACK BIRD': [`CROW`, `RAVEN`, `NEVERMORE`],
-        'YELLOW BIRD': [`CANARY`, `FEATHY`],
-        'YELLOW BASS': [`GOLDFISH`]
+        'BLONDE BIRD': [`CANARY`, `FEATHY`],
+        'BLONDE BASS': [`GOLDFISH`]
     },
 
     WILD_PLAY_ALIASES: {
@@ -102,7 +102,7 @@ module.exports.default = class OhNoGame {
             startingHandSize: 7,
             targetScore: 500,
             maxPlayers: 10,
-            botTurnTime: 7,
+            botTurnTime: 15,
             autoPlay: 0
         }
     }
@@ -164,7 +164,7 @@ module.exports.default = class OhNoGame {
         return true;
     }
 
-    addPlayer = (name) => {
+    addPlayer = (name, isBot=false) => {
         if (this.isInProgress && this.getApprovedPlayers().length >= this.config.maxPlayers) {
             console.log(`Unable to add ${name}, already at the maximum of ${this.config.maxPlayers} approved players.`);
             return false;
@@ -188,6 +188,12 @@ module.exports.default = class OhNoGame {
             }
         }
         let player = new OhNoPlayer(name, this);
+        if (isBot) {
+            player.isBot = true;
+            player.wasHuman = false;
+            player.isApproved = true;
+            player.isReady = true;
+        }
         this.allPlayers.push(player);
         return true;
     }
@@ -367,7 +373,7 @@ module.exports.default = class OhNoGame {
         return newCard.rank === oldCard.rank;
     }
 
-    findPlayerWithName(name, array=this.players) {
+    findPlayerWithName = (name, array=this.players) => {
         return array[this.findIndexOfName(name, array)];
     }
 
@@ -549,7 +555,7 @@ module.exports.default = class OhNoGame {
                 this.deck.addToTop(card);
                 this.deck.shuffle();
                 card = this.drawOne();
-                messages.push(`${this.currentDealer.getName()} dealt [b]${card.getName()}[/b] as the starting card.`);
+                messages.push(`${this.currentDealer.getName()} dealt [b]${card.getName(true)}[/b] as the starting card.`);
             }
         }
         this.discards.addToTop(card);
@@ -661,7 +667,7 @@ module.exports.default = class OhNoGame {
         this.endGame(this.players.filter(player => player.score.getValue() >= highestScore));
     }
 
-    endGame (winners) {
+    endGame (winners = []) {
         let str = '';
         if (winners.length > 0) {
             winners.sort((a, b) => b.score.getValue() - a.score.getValue());

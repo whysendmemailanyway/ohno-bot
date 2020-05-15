@@ -54,10 +54,17 @@ class OhNo {
             ddbug: (args, data) => {
                 console.log(args, data);
                 if (!this.helper.isUserMaster(data)) return;
-                this.addbot('Abbot', data);
-                this.joingame(args, data);
-                this.addbot('Costello', data);
-                this.configuregame('startingHandSize=3, targetScore=100', data);
+                // this.addbot('Abbot', data);
+                // this.joingame(args, data);
+                // this.addbot('Costello', data);
+                // this.configuregame('startingHandSize=3, targetScore=100', data);
+                this.game.addPlayer('Abbot', true);
+                this.game.addPlayer('Tom_Kat');
+                this.game.addPlayer('Costello', true);
+                let p = this.game.findPlayerWithName('Tom_Kat', this.game.allPlayers);
+                p.isApproved = true;
+                this.game.config.startingHandSize = 3;
+                this.game.config.targetScore = 50;
                 this.ready(args, data);
                 //this.start(args, data);
                 // if (this.game.isInProgress) {
@@ -169,7 +176,23 @@ class OhNo {
                 })
             },
             flip: (args, data) => {
-                this.helper.msgRoom(`/me SIGHS and sets the table upright again...`, data.channel);
+                let mutter = str => {
+                    let newStr = ``;
+                    for (let i = 0; i < str.length; i++) {
+                        if (Math.floor(Math.random() * 100) % 3 !== 0) newStr += str[i];
+                    }
+                    return newStr;
+                }
+                let name = data.character;
+                let flipMessages = [
+                    `/me SIGHS and sets the table upright again...`,
+                    `/me watches with disdain as cards go everywhere. It patiently picks each one off of the floor and sets everything back to the way it was.`,
+                    `/me dutifully restores the table. [sub]"Could you not?"[/sub]`,
+                    `/me facepalms and puts everything back, muttering something under its breath: [sub]"${mutter(`Ooo, look at me, I'm ${name} and I flip tables! I love flipping fucking tables because my name is ${name} and that's what I do, what a piece of shit...`)}"[/sub]`,
+                    `/me makes a dramatic show of putting the table back. [sub]"Somebody oughta flip you..."[/sub]`,
+                    `/me whirrs. [sub]"Go flip yourself."[/sub] But it is programmed to restore the table, and so it does...`
+                ]
+                this.helper.msgRoom(flipMessages[Math.floor(Math.random() * flipMessages.length)], data.channel);
             }
         };
         this.aliases.fatherwitticism = this.aliases.dadjoke;
@@ -181,8 +204,8 @@ class OhNo {
     }
 
     shutdown = () => {
-        this.helper.shutdown;
         this.game.endGame();
+        this.helper.shutdown();
     }
 
     shortcuts = (args, data) => {
@@ -314,8 +337,8 @@ class OhNo {
                     wildColor: commandObj.wildcolor || null,
                     withShout: commandObj.shout || false
                 }
-                console.log(`Parsed player's play as:`);
-                console.log(play);
+                //console.log(`Parsed player's play as:`);
+                //console.log(play);
                 if (!play.card) {
                     str = `Could not find a card called ${commandObj.cardname} in ${username}'s hand. Please try different syntax or a different card.`;
                 } else {
