@@ -102,6 +102,7 @@ class OhNo {
                 if (!this.helper.isUserChatOP(data)) return;
                 this.helper.msgRoom(`/me incinerates the table and produces a new one.`, data.channel);
             },
+            // TODO: if enough time passes with no messages in the channel, tell a joke
             dadjoke: (args, data) => {
                 //if (!this.helper.isUserChatOP(data)) return;
                 const url = 'https://icanhazdadjoke.com/';
@@ -193,6 +194,63 @@ class OhNo {
                     `/me whirrs. [sub]"Go flip yourself."[/sub] But it is programmed to restore the table, and so it does...`
                 ]
                 this.helper.msgRoom(flipMessages[Math.floor(Math.random() * flipMessages.length)], data.channel);
+            },
+            order: (args, data) => {
+                args = this.helper.washInput(args);
+                if (args.length === 0) {
+                    this.helper.msgRoom(`Please include the name of the drink (or "random" for a random drink). For example, !order margarita.`, data.channel);
+                    return;
+                }
+                let url;
+                if (args === `random`) {
+                    url = `https://www.thecocktaildb.com/api/json/v1/1/random.php`;
+                } else {
+                    url = `https://www.thecocktaildb.com/api/json/v1/1/search.php?s=${args}`;
+                }
+                fetch(url)
+                .then(data => {
+                    if (!data.ok) {
+                        console.log(data);
+                        throw new Error(`Tom_Kat will have to check the logs.`);
+                    }
+                    return data.json();
+                })
+                .then(res => {
+                    if (!res.drinks || res.drinks.length === 0) throw new Error(`Found no drinks matching "${args}".`);
+                    let drink = res.drinks[0];
+                    let i = 1;
+                    let ingredients = [];
+                    let ingredientKey = `strIngredient${i}`;
+                    while (drink[ingredientKey] !== null) {
+                        ingredients.push(drink[ingredientKey].toLowerCase());
+                        i++;
+                        ingredientKey = `strIngredient${i}`;
+                    }
+                    let ingredientsString = ``;
+                    if (ingredients.length === 1) {
+                        ingredientsString = ingredients[0];
+                    } else {
+                        ingredients[ingredients.length - 1] = `and ${ingredients[ingredients.length - 1]}`;
+                        ingredientsString = ingredients.join(`${ingredients.length > 2 ? ',' : ''} `);
+                    }
+                    let str = `/me downloads the instructions for making ${drink.strDrink}: ${drink.strInstructions}\n\nIt retrieves ${ingredientsString} from the cabinet behind the bar, follows the directions, and presents the finished ${drink.strGlass.toLowerCase()} on the bar. "Enjoy."`;
+                    console.log(str);
+                    this.helper.msgRoom(str, data.channel);
+                })
+                .catch(error => {
+                    console.log(error.message);
+                    this.helper.msgRoom(`Error getting drink: ${error.message}`, data.channel);
+                })
+            },
+            tip: (args, data) => {
+                let name = data.character;
+                let tipMessages = [
+                    `Thanks!`,
+                    `Much appreciated.`,
+                    `/me gives ${name} a grateful nod.`,
+                    `Thank you.`
+                ]
+                this.helper.msgRoom(tipMessages[Math.floor(Math.random() * tipMessages.length)], data.channel);
             }
         };
         this.aliases.fatherwitticism = this.aliases.dadjoke;
@@ -203,7 +261,8 @@ class OhNo {
         });
     }
 
-    shutdown = () => {
+    shutdown = (args, data) => {
+        if (data && !this.helper.isUserChatOP(data)) return;
         this.game.endGame();
         this.helper.shutdown();
     }
@@ -442,12 +501,9 @@ class OhNo {
         let successes = 0;
         let failures = 0;
         args.split(', ').forEach(name => {
-            if (this.game.addPlayer(name)) {
+            if (this.game.addPlayer(name, true)) {
                 let player = this.game.findPlayerWithName(name, this.game.allPlayers);
-                if (player && this.game.approvePlayer(name)) {
-                    player.isBot = true;
-                    player.wasHuman = false;
-                    player.isReady = true;
+                if (player) {
                     successes++;
                 } else {
                     failures++;
@@ -475,7 +531,7 @@ class OhNo {
         }
         let username = data.character;
         let str = this.defaultMessage;
-        if (this.game.addPlayer(username, this.game.allPlayers)) {
+        if (this.game.addPlayer(username)) {
             str = `Added ${username} to the game.`;
             let player = this.game.findPlayerWithName(username);
             if (player && player.isApproved) {
