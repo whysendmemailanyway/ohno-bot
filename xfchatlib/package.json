@@ -33,7 +33,7 @@
   "dependencies": {
     "@types/jasmine": "^2.6.0",
     "@types/node": "^6.0.88",
-    "async": "^1.5.2",
+    "async": "^2.6.4",
     "caller-path": "^2.0.0",
     "glob": "^7.1.2",
     "import-fresh": "^2.0.0",
