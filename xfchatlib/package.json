@@ -29,7 +29,6 @@
   "bugs": {
     "url": "https://github.com/AelithBlanchett/fchatlib/issues"
   },
-  "bundleDependencies": false,
   "dependencies": {
     "@types/jasmine": "^2.6.0",
     "@types/node": "^6.0.88",
@@ -41,7 +40,6 @@
     "lodash": "^4.17.4",
     "loglevel": "^1.6.7",
     "path": "^0.12.7",
-    "request": "^2.83.0",
     "resolve-from": "^3.0.0",
     "throttle-function": "^0.1.0",
     "typescript": "^2.5.3",

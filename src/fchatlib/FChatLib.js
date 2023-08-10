@@ -1,33 +1,9 @@
-"use strict";
-var __awaiter =
-  (this && this.__awaiter) ||
-  function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done
-          ? resolve(result.value)
-          : new P(function (resolve) {
-              resolve(result.value);
-            }).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-Object.defineProperty(exports, "__esModule", { value: true });
+class FChatLib {
+
+}
+
+module.exports.default = FChatLib;
+
 const CommandHandler_1 = require("./CommandHandler");
 let WebSocketClient = require("ws");
 const fetch = (...args) =>
@@ -404,10 +380,8 @@ class FChatLib {
       this.addChatOPListListener(this.addChatOPsToList);
       this.addChatOPAddedListener(this.addChatOPToList);
       this.addChatOPRemovedListener(this.removeChatOPFromList);
-      let ticket = this.getTicket().then((ticket) => {
-    yield this.startWebsockets(ticket);
-      })
-      
+      let ticket = yield this.getTicket();
+      yield this.startWebsockets(ticket);
     });
   }
   joinChannelsWhereInvited(args) {
@@ -541,12 +515,12 @@ class FChatLib {
     return;
   }
   getTicket() {
-    return __awaiter(this, void 0, void 0, function* () {
+    return __awaiter(this, void 0, void 0, async function* () {
       //return new Promise((resolve, reject) => {
       //request.post({ url: 'https://www.f-list.net/json/getApiTicket.php', form: { account: this.config.username, password: this.config.password } }, (err, httpResponse, body) => {
       try {
         console.log("Getting ticket...");
-        return fetch(
+        return await fetch(
           "https://www.f-list.net/json/getApiTicket.php",
           {
             method: "POST",
