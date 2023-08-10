@@ -1,51 +1,7 @@
-class FChatLib {
-
-}
-
-module.exports.default = FChatLib;
-
-const CommandHandler_1 = require("./CommandHandler");
-let WebSocketClient = require("ws");
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
-let jsonfile = require("jsonfile");
-let fs = require("fs");
-const throttle = require("throttle-function");
-let pingInterval;
-let configDir = process.cwd() + "/config";
 let fileRoomsJs = "/config.rooms.js";
+let configDir = process.cwd() + "/config";
+
 class FChatLib {
-  // async sendData(messageType: string, content: string, queueKey: string):Promise<void>{
-  //     queueKey = 'GLOBAL';
-  //     if (!this.commandQueues[queueKey]) this.commandQueues[queueKey] = {commands: [], lastReceived: new Date('January 1, 2000 00:00:00')};
-  //     let q = this.commandQueues[queueKey];
-  //     let timeToWait = q.commands.length * this.floodLimit * 1000;
-  //     for (let i = 0; i < q.commands.length; i++) {
-  //         timeToWait += q.commands[i].timeToWait;
-  //     }
-  //     let timeSinceLastCommand = (Date.now() - q.lastReceived);
-  //     if (timeSinceLastCommand < this.floodLimit * 1000) {
-  //         timeToWait += (this.floodLimit * 1000) - timeSinceLastCommand;
-  //     }
-  //     let command = {messageType, content, timeToWait};
-  //     q.commands.push(command);
-  //     console.log(`Time since last command for ${queueKey}: ${timeSinceLastCommand}`);
-  //     if (timeToWait > 0) {
-  //         console.log(`Waiting approximately ${command.timeToWait/1000} seconds...`)
-  //         while (command.timeToWait > 0 || q.commands.indexOf(command) !== 0) {
-  //             let awaitTime = command.timeToWait <= 0 ? 500 : command.timeToWait;
-  //             //console.log(`Time to wait: ${timeToWait}`);
-  //             await this.timeout(awaitTime);
-  //             command.timeToWait -= awaitTime;
-  //             console.log(`Waited ${awaitTime/1000} s. Remaining time to wait: ${command.timeToWait/1000} s. Command index: ${q.commands.indexOf(command)}`);
-  //         }
-  //     }
-  //     q.lastReceived = Date.now();
-  //     //console.log(`Sending WS at ${Date.now()}`);
-  //     //console.log(content);
-  //     this.sendWS(messageType, content);
-  //     q.commands.splice(q.commands.indexOf(command), 1);
-  // }
   constructor(configuration) {
     this.config = null;
     this.errorListeners = [];
@@ -71,29 +27,20 @@ class FChatLib {
     this.usersInChannel = [];
     this.chatOPsInChannel = [];
     this.commandHandlers = [];
-    //channels:Map<string, Array<IPlugin>> = new Map<string, Array<IPlugin>>();
     this.channels = new Map();
     this.floodLimit = 1.5;
-    // lastTimeCommandReceived:number = Number.MAX_VALUE;
-    //lastTimeCommandReceived:number = 0;
-    //commandsInQueue:number = 0;
-    //commandQueues = {};
     this.commands = [];
     this.lastTimeCommandSent = Date.now();
-    if (configuration == null) {
+    if (!configuration) {
       console.log("No configuration passed, cannot start.");
       process.exit();
     } else {
       this.config = configuration;
       if (
-        this.config.username == undefined ||
-        this.config.username == "" ||
-        this.config.password == undefined ||
-        this.config.password == "" ||
-        this.config.character == "" ||
-        this.config.character == "" ||
-        this.config.master == "" ||
-        this.config.master == ""
+        !this.config.username ||
+        !this.config.master ||
+        !this.config.password ||
+        !this.config.character
       ) {
         console.log(
           "Wrong parameters passed. All the fields in the configuration file are required."
@@ -112,9 +59,28 @@ class FChatLib {
       this.config.room !== undefined &&
       this.channels.get(this.config.room) == null
     ) {
-      //this.channels.set(this.config.room, {channelTitle: 'defaultTitle', pluginsList: [], channelName: 'defaultName'});
       this.updateRoomsConfig();
     }
+  }
+
+  updateRoomsConfig() {
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir);
+    }
+    let ignoredKeys = ["instantiatedPlugin"];
+    let cache = [];
+    let tempJson = JSON.stringify([...this.channels], function (key, value) {
+      if (typeof value === "object" && value !== null) {
+        if (cache.indexOf(value) !== -1 || ignoredKeys.indexOf(key) !== -1) {
+          // Circular reference found, discard key
+          return;
+        }
+        // Store value in our collection
+        cache.push(value);
+      }
+      return value;
+    });
+    jsonfile.writeFile(configDir + fileRoomsJs, tempJson);
   }
   addConnectionListener(fn) {
     this.removeConnectionListener(fn);
@@ -317,6 +283,18 @@ class FChatLib {
       this.variableListeners.splice(id, 1);
     }
   }
+}
+
+module.exports.default = FChatLib;
+
+const CommandHandler_1 = require("./CommandHandler");
+let WebSocketClient = require("ws");
+let jsonfile = require("jsonfile");
+let fs = require("fs");
+const throttle = require("throttle-function");
+let pingInterval;
+class FChatLib {
+
   timeout(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
