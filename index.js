@@ -1,6 +1,6 @@
 'use strict';
 require('dotenv').config();
-let FChatLib = require('./xfchatlib').default;
+let FChatLib = require('./src/fchatlib/FChatLib').default;
 let botPlugin = require('./plugins/OhNo').CommandHandler;
 
 // cd xfchatlib/ && npm install && cd .. && npm start
@@ -75,7 +75,7 @@ let botPlugin = require('./plugins/OhNo').CommandHandler;
 // }
 // return;
 
-let options = {
+let config = {
     username: process.env.FLIST_USERNAME,
     password: process.env.FLIST_PASSWORD,
     character: process.env.FLIST_BOT_CHARACTER,
@@ -85,7 +85,7 @@ let options = {
     cversion: process.env.CLIENT_VERSION
 };
 
-let myFchatBot = new FChatLib(options);
+let myFchatBot = new FChatLib(config);
 
 myFchatBot.connect();
 

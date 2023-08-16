@@ -1,5 +1,10 @@
 let fileRoomsJs = "/config.rooms.js";
 let configDir = process.cwd() + "/config";
+const CommandHandler_1 = require("./CommandHandler");
+let WebSocketClient = require("ws");
+let jsonfile = require("jsonfile");
+let fs = require("fs");
+let pingInterval;
 
 class FChatLib {
   constructor(configuration) {
@@ -283,21 +288,7 @@ class FChatLib {
       this.variableListeners.splice(id, 1);
     }
   }
-}
 
-module.exports.default = FChatLib;
-
-const CommandHandler_1 = require("./CommandHandler");
-let WebSocketClient = require("ws");
-let jsonfile = require("jsonfile");
-let fs = require("fs");
-const throttle = require("throttle-function");
-let pingInterval;
-class FChatLib {
-
-  timeout(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
   queueData(messageType, content) {
     // TODO: use a real ID here, cuid() or something
     let command = { messageType, content, id: Math.random() };
@@ -305,30 +296,7 @@ class FChatLib {
     //console.log(`Pushed a new command, length is now ${this.commands.length}`);
     this.sendCommandWhenReady(command);
   }
-  sendCommandWhenReady(command) {
-    return __awaiter(this, void 0, void 0, function* () {
-      //console.log(`Received new command, ${this.commands.length} total commands.`);
-      let timeToWait = (this.commands.length - 1) * this.floodLimit * 1000;
-      let timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
-      if (timeSinceLastCommand <= this.floodLimit * 1000)
-        timeToWait += this.floodLimit * 1000 - timeSinceLastCommand;
-      while (
-        timeSinceLastCommand <= this.floodLimit * 1000 ||
-        this.commands[0] !== command
-      ) {
-        console.log(`Waiting ${timeToWait} ms`);
-        yield this.timeout(timeToWait);
-        timeToWait = 444;
-        console.log(`Finished waiting.`);
-        timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
-      }
-      //let command = this.commands[0];
-      this.sendWS(command.messageType, command.content);
-      this.commands.splice(0, 1);
-      //!console.log(`Removed a new command, length is now ${this.commands.length}`);
-      this.lastTimeCommandSent = Date.now();
-    });
-  }
+
   //create one commandHandler per room
   generateCommandHandlers() {
     for (let room of this.channels.keys()) {
@@ -337,30 +305,6 @@ class FChatLib {
   }
   setFloodLimit(delay) {
     this.floodLimit = delay;
-  }
-  connect() {
-    return __awaiter(this, void 0, void 0, function* () {
-      this.ws = null;
-      this.setFloodLimit(this.floodLimit);
-      this.generateCommandHandlers();
-      this.addMessageListener(this.commandListener); //basic commands + plugins loader, one instance for one bot
-      this.addConnectionListener(this.joinChannelOnConnect);
-      if (this.config.autoJoinOnInvite) {
-        this.addInviteListener(this.joinChannelsWhereInvited);
-      }
-      this.addVariableListener(this.variableChangeHandler);
-      //user handling
-      this.addInitialChannelDataListener(this.addUsersToList);
-      this.addOfflineListener(this.removeUserFromChannels);
-      this.addLeaveListener(this.removeUserFromList);
-      this.addJoinListener(this.addUserToList);
-      //permissions handling
-      this.addChatOPListListener(this.addChatOPsToList);
-      this.addChatOPAddedListener(this.addChatOPToList);
-      this.addChatOPRemovedListener(this.removeChatOPFromList);
-      let ticket = yield this.getTicket();
-      yield this.startWebsockets(ticket);
-    });
   }
   joinChannelsWhereInvited(args) {
     this.joinNewChannel(args);
@@ -492,69 +436,6 @@ class FChatLib {
   variableChangeHandler(args) {
     return;
   }
-  getTicket() {
-    return __awaiter(this, void 0, void 0, async function* () {
-      //return new Promise((resolve, reject) => {
-      //request.post({ url: 'https://www.f-list.net/json/getApiTicket.php', form: { account: this.config.username, password: this.config.password } }, (err, httpResponse, body) => {
-      try {
-        console.log("Getting ticket...");
-        return await fetch(
-          "https://www.f-list.net/json/getApiTicket.php",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              account: this.config.username,
-              password: this.config.password,
-            }),
-          }
-          /*(err, httpResponse, body) => {
-            if (err) {
-              reject(err);
-            }
-            let response = JSON.parse(body);
-            let ticket = response.ticket;
-            var json = {
-              method: "ticket",
-              account: this.config.username,
-              ticket: ticket,
-              character: this.config.character,
-              cname: this.config.cname,
-              cversion: this.config.cversion,
-            };
-            resolve(json);
-          }*/
-        );
-      } catch (err) {
-        console.log("Error getting ticket:");
-        console.log(err);
-        return;
-      }
-      //});
-    });
-  }
-  sendWS(command, object) {
-    if (this.ws.readyState) {
-      let data = command + " " + JSON.stringify(object);
-      // console.log(`Message Sent:`);
-      // console.log(data)
-      // console.log(`-----`);
-      this.ws.send(data);
-      return true;
-    }
-    return false;
-  }
-  sendMessage(message, channel) {
-    let json = {};
-    json.channel = channel;
-    json.message = message;
-    this.queueData("MSG", json);
-  }
-  sendPrivMessage(message, character) {
-    let json = {};
-    json.message = message;
-    json.recipient = character;
-    this.queueData("PRI", json);
-  }
   getUserList(channel) {
     if (this.usersInChannel[channel] == undefined) {
       return [];
@@ -580,19 +461,6 @@ class FChatLib {
   }
   disconnect() {
     this.ws.close();
-  }
-  restart() {
-    this.disconnect();
-    setTimeout(this.connect, 2000);
-  }
-  softRestart(channel) {
-    this.commandHandlers[channel] = new CommandHandler_1.default(this, channel);
-  }
-  roll(customDice, channel) {
-    let json = {};
-    json.dice = customDice || "1d10";
-    json.channel = channel;
-    this.queueData("RLL", json);
   }
   updateRoomsConfig() {
     if (!fs.existsSync(configDir)) {
@@ -645,6 +513,12 @@ class FChatLib {
         console.log(data);
       }
       if (data != null) {
+        if (typeof data !== "string") {
+          data = data.toString();
+          if (this.config.debug) {
+            console.log(data);
+          }
+        }
         command = argument = "";
         command = this.splitOnce(data, " ")[0].trim();
         try {
@@ -775,6 +649,227 @@ class FChatLib {
     }
     return result;
   }
+  connect() {
+    this.ws = null;
+    this.setFloodLimit(this.floodLimit);
+    this.generateCommandHandlers();
+    this.addMessageListener(this.commandListener); //basic commands + plugins loader, one instance for one bot
+    this.addConnectionListener(this.joinChannelOnConnect);
+    if (this.config.autoJoinOnInvite) {
+      this.addInviteListener(this.joinChannelsWhereInvited);
+    }
+    this.addVariableListener(this.variableChangeHandler);
+    //user handling
+    this.addInitialChannelDataListener(this.addUsersToList);
+    this.addOfflineListener(this.removeUserFromChannels);
+    this.addLeaveListener(this.removeUserFromList);
+    this.addJoinListener(this.addUserToList);
+    //permissions handling
+    this.addChatOPListListener(this.addChatOPsToList);
+    this.addChatOPAddedListener(this.addChatOPToList);
+    this.addChatOPRemovedListener(this.removeChatOPFromList);
+    return this.getTicket()
+      .then((response) => {
+        return response.json();
+      })
+      .then((data) => {
+        let ticket = {
+          method: "ticket",
+          account: this.config.username,
+          ticket: data.ticket,
+          character: this.config.character,
+          cname: this.config.cname,
+          cversion: this.config.cversion,
+        };
+        this.startWebsockets(ticket);
+      });
+  }
+
+  getTicket() {
+    let formData = new FormData();
+    formData.append("account", this.config.username);
+    formData.append("password", this.config.password);
+    formData.append("no_friends", true);
+    formData.append("no_bookmarks", true);
+    formData.append("no_characters", true);
+    try {
+      console.log("Getting ticket...");
+      return fetch("https://www.f-list.net/json/getApiTicket.php", {
+        method: "POST",
+        body: formData,
+        // body: JSON.stringify({
+        //   account: "" + this.config.username,
+        //   password: "" + this.config.password,
+        //   no_friends: true,
+        //   no_characters: true,
+        //   no_bookmarks: true
+        // }),
+      });
+    } catch (err) {
+      console.log("Error getting ticket:");
+      console.log(err);
+      throw "Error getting ticket: " + err;
+    }
+  }
+
+  sendWS(command, object) {
+    if (this.ws.readyState) {
+      let data = command + " " + JSON.stringify(object);
+      // console.log(`Message Sent:`);
+      // console.log(data)
+      // console.log(`-----`);
+      this.ws.send(data);
+      return true;
+    }
+    return false;
+  }
+  sendMessage(message, channel) {
+    let json = {};
+    json.channel = channel;
+    json.message = message;
+    this.queueData("MSG", json);
+  }
+  sendPrivMessage(message, character) {
+    let json = {};
+    json.message = message;
+    json.recipient = character;
+    this.queueData("PRI", json);
+  }
+
+  restart() {
+    this.disconnect();
+    setTimeout(this.connect, 2000);
+  }
+  softRestart(channel) {
+    this.commandHandlers[channel] = new CommandHandler_1.default(this, channel);
+  }
+  roll(customDice, channel) {
+    let json = {};
+    json.dice = customDice || "1d10";
+    json.channel = channel;
+    this.queueData("RLL", json);
+  }
+
+  async sendCommandWhenReady(command) {
+    let timeToWait = (this.commands.length - 1) * this.floodLimit * 1000;
+    let timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
+    if (timeSinceLastCommand <= this.floodLimit * 1000)
+      timeToWait += this.floodLimit * 1000 - timeSinceLastCommand;
+    while (
+      timeSinceLastCommand <= this.floodLimit * 1000 ||
+      this.commands[0] !== command
+    ) {
+      console.log(`Waiting ${timeToWait} ms`);
+      await new Promise((r) => setTimeout(r, timeToWait));
+      timeToWait = 444;
+      console.log(`Finished waiting.`);
+      timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
+    }
+    //let command = this.commands[0];
+    this.sendWS(command.messageType, command.content);
+    this.commands.splice(0, 1);
+    //!console.log(`Removed a new command, length is now ${this.commands.length}`);
+    this.lastTimeCommandSent = Date.now();
+  }
 }
-exports.default = FChatLib;
+
+module.exports.default = FChatLib;
+
+// class FChatLib {
+//   timeout(ms) {
+//     return new Promise((resolve) => setTimeout(resolve, ms));
+//   }
+
+//   sendCommandWhenReady(command) {
+//     return __awaiter(this, void 0, void 0, function* () {
+//       //console.log(`Received new command, ${this.commands.length} total commands.`);
+//       let timeToWait = (this.commands.length - 1) * this.floodLimit * 1000;
+//       let timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
+//       if (timeSinceLastCommand <= this.floodLimit * 1000)
+//         timeToWait += this.floodLimit * 1000 - timeSinceLastCommand;
+//       while (
+//         timeSinceLastCommand <= this.floodLimit * 1000 ||
+//         this.commands[0] !== command
+//       ) {
+//         console.log(`Waiting ${timeToWait} ms`);
+//         yield this.timeout(timeToWait);
+//         timeToWait = 444;
+//         console.log(`Finished waiting.`);
+//         timeSinceLastCommand = Date.now() - this.lastTimeCommandSent;
+//       }
+//       //let command = this.commands[0];
+//       this.sendWS(command.messageType, command.content);
+//       this.commands.splice(0, 1);
+//       //!console.log(`Removed a new command, length is now ${this.commands.length}`);
+//       this.lastTimeCommandSent = Date.now();
+//     });
+//   }
+//   connect() {
+//     return __awaiter(this, void 0, void 0, function* () {
+//       this.ws = null;
+//       this.setFloodLimit(this.floodLimit);
+//       this.generateCommandHandlers();
+//       this.addMessageListener(this.commandListener); //basic commands + plugins loader, one instance for one bot
+//       this.addConnectionListener(this.joinChannelOnConnect);
+//       if (this.config.autoJoinOnInvite) {
+//         this.addInviteListener(this.joinChannelsWhereInvited);
+//       }
+//       this.addVariableListener(this.variableChangeHandler);
+//       //user handling
+//       this.addInitialChannelDataListener(this.addUsersToList);
+//       this.addOfflineListener(this.removeUserFromChannels);
+//       this.addLeaveListener(this.removeUserFromList);
+//       this.addJoinListener(this.addUserToList);
+//       //permissions handling
+//       this.addChatOPListListener(this.addChatOPsToList);
+//       this.addChatOPAddedListener(this.addChatOPToList);
+//       this.addChatOPRemovedListener(this.removeChatOPFromList);
+//       let ticket = yield this.getTicket();
+//       yield this.startWebsockets(ticket);
+//     });
+//   }
+
+//   getTicket() {
+//     return __awaiter(this, void 0, void 0, async function* () {
+//       //return new Promise((resolve, reject) => {
+//       //request.post({ url: 'https://www.f-list.net/json/getApiTicket.php', form: { account: this.config.username, password: this.config.password } }, (err, httpResponse, body) => {
+//       try {
+//         console.log("Getting ticket...");
+//         return await fetch(
+//           "https://www.f-list.net/json/getApiTicket.php",
+//           {
+//             method: "POST",
+//             body: JSON.stringify({
+//               account: this.config.username,
+//               password: this.config.password,
+//             }),
+//           }
+//           /*(err, httpResponse, body) => {
+//             if (err) {
+//               reject(err);
+//             }
+//             let response = JSON.parse(body);
+//             let ticket = response.ticket;
+//             var json = {
+//               method: "ticket",
+//               account: this.config.username,
+//               ticket: ticket,
+//               character: this.config.character,
+//               cname: this.config.cname,
+//               cversion: this.config.cversion,
+//             };
+//             resolve(json);
+//           }*/
+//         );
+//       } catch (err) {
+//         console.log("Error getting ticket:");
+//         console.log(err);
+//         return;
+//       }
+//       //});
+//     });
+//   }
+
+// }
+// exports.default = FChatLib;
 //# sourceMappingURL=FChatLib.js.map
