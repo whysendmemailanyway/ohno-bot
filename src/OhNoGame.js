@@ -34,9 +34,9 @@ const ohNoDeckDataConfig = {
         'PIG': [`HOG`, `SOW`, `PIGGY`, `OINK`, `OINKER`, `OINKOINK`, `THE OTHER WHITE MEAT`, `BACON`, `HAM`, `PORK`],
         'COW': [`BULL`, `MOO`, `MOOMOO`, `UDDERS`, `STEAK`, `BURGER`, `HAMBURGER`],
         'GRIFFIN': [`GRIFFON`, `GRYPHON`, `GRIFF`, `GRYPH`],
-        'TROLL': [`TWOLL`],
+        'TROLL': [`TWOLL`, `SAZHI`],
         'WYVERN': [`DRAKE`],
-        'MAGIC': [`MAGIC SPELL`, `MAGIC THE GATHERING`, `SPELL`, `INCANTATION`, `HEX`, `CHARM`],
+        'MAGIC': [`MAGIC SPELL`, `MAGIC THE GATHERING`, `SPELL`, `INCANTATION`, `HEX`, `CHARM`, `MAGIC CARD`],
         'DRAGON': [`WYRM`, `TROGDOR`, `ALDUIN`, `PAARTHURNAX`, `DRAGGUM`, `DRAGGY`, `DURG`]
     },
 

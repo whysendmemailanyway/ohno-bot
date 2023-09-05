@@ -1,1 +1,1 @@
-"[]"
+"[[\"ADH-bcfb72a746f9ae2e2931\",{\"channelName\":\"ADH-bcfb72a746f9ae2e2931\",\"channelTitle\":\"OhNo test\",\"pluginsList\":[]}],[\"ADH-67c2515e2b0097873922\",{\"channelName\":\"ADH-67c2515e2b0097873922\",\"channelTitle\":\"Bunny dice ^ u ^\",\"pluginsList\":[{\"name\":\"OhNo\"}]}]]"

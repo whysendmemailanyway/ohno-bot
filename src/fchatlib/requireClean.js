@@ -6,7 +6,7 @@ let path = require("path");
 let resolveFrom = require("resolve-from");
 //let callerPath = require("caller-path");
 let callerPath;
-import("../../node_modules/caller-path/index.js").then(callerpath => this.callerPath = callerpath);
+import("../../node_modules/caller-path/index.js").then(callerpath => callerPath = callerpath.default);
 class RequireClean {
     constructor(name, deep = null) {
         this.deleteMod = function (mod) {
